@@ -105,6 +105,14 @@ export const STRINGS = {
     savedOk:          "Inventory saved successfully!",
     saveFailed:       "Save failed. Please try again.",
 
+    // Name setup
+    namePrompt:       "Who is counting today?",
+    namePlaceholder:  "Enter your name…",
+    nameConfirm:      "Start Counting",
+    changeName:       "Change My Name",
+    currentName:      "Counting as",
+    nameChanged:      (n) => `Name changed to "${n}"`,
+
     // Days
     days: ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
     daysShort: ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"],
@@ -215,6 +223,14 @@ export const STRINGS = {
     // Toast
     savedOk:          "库存已成功保存！",
     saveFailed:       "保存失败，请重试。",
+
+    // Name setup
+    namePrompt:       "今天是谁在点货？",
+    namePlaceholder:  "输入你的名字…",
+    nameConfirm:      "开始点货",
+    changeName:       "修改我的名字",
+    currentName:      "当前点货员",
+    nameChanged:      (n) => `名字已改为"${n}"`,
 
     // Days
     days: ["星期一","星期二","星期三","星期四","星期五","星期六","星期日"],

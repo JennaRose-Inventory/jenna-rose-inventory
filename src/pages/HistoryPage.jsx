@@ -19,7 +19,11 @@ export default function HistoryPage({ t, historyData }) {
       if (!historyMap[item.category][item.name]) historyMap[item.category][item.name] = [];
       const s = item.stock;
       if (s !== "" && s !== null && s !== undefined) {
-        historyMap[item.category][item.name].push({ date: shortDate(record.date), stock: s });
+        historyMap[item.category][item.name].push({
+          date: shortDate(record.date),
+          stock: s,
+          savedBy: record.savedBy || null,
+        });
       }
     });
   });
@@ -80,6 +84,11 @@ export default function HistoryPage({ t, historyData }) {
                         {String(e.stock)}
                       </span>
                       <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>{e.date}</span>
+                      {e.savedBy && (
+                        <span style={{ color: "var(--text-muted)", fontSize: "9px", opacity: 0.65 }}>
+                          · {e.savedBy}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

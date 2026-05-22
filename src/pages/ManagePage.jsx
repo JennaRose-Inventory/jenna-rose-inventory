@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card, SectionLabel, Select, Input, PrimaryBtn } from "../components/UI.jsx";
 
-export default function ManagePage({ t, items, setItems, allCategories, onToast }) {
+export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName }) {
   const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
   const firstActive = items.find((i) => i.active !== false);
 
@@ -15,6 +15,7 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast 
     name: firstActive?.name ?? "",
   });
   const [newItem, setNewItem] = useState({ category: allCategories[0], name: "", type: "quantity" });
+  const [newName, setNewName] = useState(userName || "");
 
   function itemsInCat(cat) { return items.filter((i) => i.active !== false && i.category === cat); }
 
@@ -53,6 +54,31 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast 
 
   return (
     <div className="page-enter" style={{ display: "flex", flexDirection: "column", gap: "14px", paddingBottom: "24px" }}>
+
+      {/* Change name */}
+      <div>
+        <SectionLabel>👤 {t.changeName}</SectionLabel>
+        <Card style={{ padding: "14px" }}>
+          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "10px" }}>
+            {t.currentName}: <strong style={{ color: "var(--brown-700)" }}>{userName}</strong>
+          </div>
+          <div style={labelStyle}>{t.itemName.replace("Item","").trim() || "Name"}</div>
+          <div style={{ marginBottom: "10px" }}>
+            <Input
+              placeholder={t.namePlaceholder}
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+          <PrimaryBtn onClick={() => {
+            if (!newName.trim()) return;
+            onChangeName(newName.trim());
+            onToast(t.nameChanged(newName.trim()), "success");
+          }}>
+            {t.nameConfirm}
+          </PrimaryBtn>
+        </Card>
+      </div>
 
       {/* Change input type */}
       <div>

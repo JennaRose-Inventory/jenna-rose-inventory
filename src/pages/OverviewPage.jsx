@@ -61,6 +61,11 @@ export default function OverviewPage({ t, historyData }) {
             <div style={{ fontSize: "9px", fontWeight: 600, color: i === 0 ? "var(--brown-400)" : "var(--text-muted)" }}>
               {i === 0 ? t.latest : t.yesterday}
             </div>
+            {rec.savedBy && (
+              <div style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "1px" }}>
+                👤 {rec.savedBy}
+              </div>
+            )}
           </div>
         ))}
       </div>
