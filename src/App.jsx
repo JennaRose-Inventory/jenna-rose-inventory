@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import {
-  collection, addDoc, getDocs,
-  query, orderBy, limit,
+  collection, addDoc, getDocs, deleteDoc,
+  query, orderBy, limit, doc,
 } from "firebase/firestore";
 
 import { db } from "./firebase.js";
 import { itemsData } from "./data/items.js";
 import { countKey } from "./utils/helpers.js";
+import { STRINGS } from "./utils/lang.js";
 import Toast from "./components/Toast.jsx";
 
 import CountPage       from "./pages/CountPage.jsx";
@@ -16,24 +17,34 @@ import DashboardPage   from "./pages/DashboardPage.jsx";
 import PredictionsPage from "./pages/PredictionsPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
 
-const NAV = [
-  { id: "Count",       icon: "📋", label: "Count"    },
-  { id: "Overview",    icon: "👁",  label: "Overview" },
-  { id: "Dashboard",   icon: "📊", label: "Stats"    },
-  { id: "Predictions", icon: "🤖", label: "AI"       },
-  { id: "History",     icon: "🕐", label: "History"  },
-  { id: "Manage",      icon: "⚙️", label: "Manage"   },
-];
+const MAX_HISTORY = 14;
 
 export default function App() {
+  const [lang, setLang]               = useState(() => localStorage.getItem("jr_lang") || "en");
   const [page, setPage]               = useState("Count");
   const [items, setItems]             = useState([]);
   const [counts, setCounts]           = useState({});
   const [historyData, setHistoryData] = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [toast, setToast]             = useState(null); // { message, type }
+  const [toast, setToast]             = useState(null);
 
+  const t = STRINGS[lang];
   const allCategories = [...new Set(itemsData.map((i) => i.category))];
+
+  const NAV = [
+    { id: "Count",       icon: "📋", label: t.navCount    },
+    { id: "Overview",    icon: "👁",  label: t.navOverview },
+    { id: "History",     icon: "🕐", label: t.navHistory  },
+    { id: "Dashboard",   icon: "📊", label: t.navStats    },
+    { id: "Predictions", icon: "🤖", label: t.navAI       },
+    { id: "Manage",      icon: "⚙️", label: t.navManage   },
+  ];
+
+  function toggleLang() {
+    const next = lang === "en" ? "zh" : "en";
+    setLang(next);
+    localStorage.setItem("jr_lang", next);
+  }
 
   useEffect(() => { loadAll(); }, []);
 
@@ -45,7 +56,6 @@ export default function App() {
     } catch {
       setItems(itemsData);
     }
-
     try {
       const q2 = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
       const snap2 = await getDocs(q2);
@@ -53,7 +63,6 @@ export default function App() {
     } catch {
       setHistoryData([]);
     }
-
     setCounts({});
     setLoading(false);
   }
@@ -62,8 +71,16 @@ export default function App() {
     try {
       const q = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
-      setHistoryData(snap.docs.map((d) => d.data()));
-    } catch { /* silent */ }
+      if (snap.docs.length > MAX_HISTORY) {
+        const toDelete = snap.docs.slice(MAX_HISTORY);
+        await Promise.all(toDelete.map((d) => deleteDoc(doc(db, "inventoryHistory", d.id))));
+      }
+      const q2 = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
+      const snap2 = await getDocs(q2);
+      setHistoryData(snap2.docs.map((d) => d.data()));
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   async function saveInventory() {
@@ -79,10 +96,10 @@ export default function App() {
       });
       setCounts({});
       await reloadHistory();
-      showToast("Inventory saved successfully!", "success");
+      showToast(t.savedOk, "success");
     } catch (err) {
       console.error(err);
-      showToast("Save failed. Please try again.", "error");
+      showToast(t.saveFailed, "error");
     }
   }
 
@@ -109,7 +126,7 @@ export default function App() {
           borderRadius: "50%",
           animation: "spin 0.7s linear infinite",
         }} />
-        <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>Loading inventory…</div>
+        <div style={{ fontSize: "13px", color: "var(--text-muted)" }}>{t.loading}</div>
       </div>
     );
   }
@@ -117,17 +134,11 @@ export default function App() {
   return (
     <div style={{ minHeight: "100dvh", background: "var(--bg)", display: "flex", flexDirection: "column" }}>
 
-      {/* ── Toast ── */}
       {toast && (
-        <Toast
-          key={toast.key}
-          message={toast.message}
-          type={toast.type}
-          onDone={() => setToast(null)}
-        />
+        <Toast key={toast.key} message={toast.message} type={toast.type} onDone={() => setToast(null)} />
       )}
 
-      {/* ── Top header ── */}
+      {/* Top header */}
       <div style={{
         position: "sticky", top: 0, zIndex: 200,
         background: "var(--surface)",
@@ -141,79 +152,88 @@ export default function App() {
           <span style={{ fontSize: "20px" }}>☕</span>
           <div>
             <div style={{ fontWeight: 700, fontSize: "14px", color: "var(--text-primary)", lineHeight: 1.1 }}>
-              Jenna Rose
+              {t.appName}
             </div>
-            <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>Inventory System</div>
+            <div style={{ fontSize: "10px", color: "var(--text-muted)" }}>{t.appSub}</div>
           </div>
         </div>
-        <div style={{
-          fontSize: "11px", color: "var(--text-muted)",
-          background: "var(--surface2)",
-          border: "1px solid var(--border)",
-          borderRadius: "var(--radius-full)",
-          padding: "3px 10px",
-        }}>
-          {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {/* Language toggle */}
+          <button
+            onClick={toggleLang}
+            style={{
+              display: "flex", alignItems: "center", gap: "4px",
+              padding: "4px 10px",
+              borderRadius: "var(--radius-full)",
+              border: "1.5px solid var(--border)",
+              background: "var(--surface2)",
+              fontSize: "11px", fontWeight: 700,
+              color: "var(--brown-700)",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+          >
+            {lang === "en" ? "🇬🇧 EN" : "🇨🇳 中文"}
+          </button>
+
+          {/* Date */}
+          <div style={{
+            fontSize: "11px", color: "var(--text-muted)",
+            background: "var(--surface2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-full)",
+            padding: "3px 10px",
+          }}>
+            {new Date().toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" })}
+          </div>
         </div>
       </div>
 
-      {/* ── Page content ── */}
+      {/* Page content */}
       <div style={{
         flex: 1,
         padding: "16px 14px",
         paddingBottom: `calc(var(--nav-h) + 16px)`,
         overflowY: "auto",
       }}>
-        {page === "Count"       && <CountPage       items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} />}
-        {page === "Overview"    && <OverviewPage    historyData={historyData} />}
-        {page === "Dashboard"   && <DashboardPage   historyData={historyData} items={items} />}
-        {page === "Predictions" && <PredictionsPage historyData={historyData} items={items} />}
-        {page === "History"     && <HistoryPage     historyData={historyData} />}
-        {page === "Manage"      && (
-          <ManagePage
-            items={items}
-            setItems={setItems}
-            allCategories={allCategories}
-            onToast={showToast}
-          />
-        )}
+        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} />}
+        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} />}
+        {page === "History"     && <HistoryPage     t={t} historyData={historyData} />}
+        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} />}
+        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} />}
+        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} />}
       </div>
 
-      {/* ── Bottom nav ── */}
+      {/* Bottom nav */}
       <nav style={{
         position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
         width: "100%", maxWidth: "480px",
         height: "var(--nav-h)",
         background: "var(--surface)",
         borderTop: "1px solid var(--border)",
-        display: "flex",
-        zIndex: 150,
+        display: "flex", zIndex: 150,
         boxShadow: "0 -4px 16px rgba(44,26,14,0.08)",
       }}>
         {NAV.map(({ id, icon, label }) => {
           const active = page === id;
           return (
-            <button
-              key={id}
-              onClick={() => setPage(id)}
-              style={{
-                flex: 1,
-                display: "flex", flexDirection: "column",
-                alignItems: "center", justifyContent: "center",
-                gap: "2px",
-                background: "none", border: "none",
-                color: active ? "var(--brown-700)" : "var(--text-muted)",
-                fontSize: "9px", fontWeight: active ? 700 : 500,
-                letterSpacing: "0.03em",
-                position: "relative",
-                transition: "color 0.15s",
-              }}
-            >
+            <button key={id} onClick={() => setPage(id)} style={{
+              flex: 1,
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: "2px",
+              background: "none", border: "none",
+              color: active ? "var(--brown-700)" : "var(--text-muted)",
+              fontSize: "9px", fontWeight: active ? 700 : 500,
+              letterSpacing: "0.03em",
+              position: "relative",
+              transition: "color 0.15s",
+            }}>
               {active && (
                 <div style={{
                   position: "absolute", top: 0, left: "20%", right: "20%",
-                  height: "2px",
-                  background: "var(--brown-700)",
+                  height: "2px", background: "var(--brown-700)",
                   borderRadius: "0 0 3px 3px",
                 }} />
               )}

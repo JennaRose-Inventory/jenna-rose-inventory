@@ -2,26 +2,31 @@ import { useState } from "react";
 import { Card, SectionLabel } from "../components/UI.jsx";
 import { stockColor } from "../utils/helpers.js";
 
-export default function HistoryPage({ historyData }) {
-  const [search, setSearch] = useState("");
+function shortDate(dateStr) {
+  if (!dateStr) return "";
+  const parts = dateStr.split("/");
+  return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : dateStr;
+}
 
-  // Build { category: { name: [{date, stock}] } }
+export default function HistoryPage({ t, historyData }) {
+  const [search, setSearch] = useState("");
+  const records = historyData.slice(0, 14);
+
   const historyMap = {};
-  historyData.forEach((record) => {
+  records.forEach((record) => {
     (record.items ?? []).forEach((item) => {
       if (!historyMap[item.category]) historyMap[item.category] = {};
       if (!historyMap[item.category][item.name]) historyMap[item.category][item.name] = [];
       const s = item.stock;
       if (s !== "" && s !== null && s !== undefined) {
-        historyMap[item.category][item.name].push({ date: record.date, stock: s });
+        historyMap[item.category][item.name].push({ date: shortDate(record.date), stock: s });
       }
     });
   });
 
   const filtered = Object.keys(historyMap).reduce((acc, cat) => {
     const names = Object.keys(historyMap[cat]).filter(
-      (n) => n.toLowerCase().includes(search.toLowerCase()) ||
-             cat.toLowerCase().includes(search.toLowerCase())
+      (n) => n.toLowerCase().includes(search.toLowerCase()) || cat.toLowerCase().includes(search.toLowerCase())
     );
     if (names.length) {
       acc[cat] = {};
@@ -32,14 +37,10 @@ export default function HistoryPage({ historyData }) {
 
   return (
     <div className="page-enter">
-      {/* Search */}
       <div style={{ position: "relative", marginBottom: "16px" }}>
-        <span style={{
-          position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)",
-          fontSize: "14px", pointerEvents: "none",
-        }}>🔍</span>
+        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", pointerEvents: "none" }}>🔍</span>
         <input
-          placeholder="Search item or category…"
+          placeholder={t.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -48,15 +49,14 @@ export default function HistoryPage({ historyData }) {
             border: "1.5px solid var(--border)",
             background: "var(--surface)",
             fontSize: "13px", color: "var(--text-primary)",
-            boxSizing: "border-box",
-            boxShadow: "var(--shadow-sm)",
+            boxSizing: "border-box", boxShadow: "var(--shadow-sm)",
           }}
         />
       </div>
 
       {Object.keys(filtered).length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
-          {search ? "No items match your search." : "No history yet."}
+          {search ? t.noMatch : t.noHistory}
         </div>
       )}
 
@@ -64,39 +64,34 @@ export default function HistoryPage({ historyData }) {
         <div key={category} style={{ marginBottom: "16px" }}>
           <SectionLabel>{category}</SectionLabel>
           <Card>
-            {Object.keys(filtered[category]).map((itemName, idx, arr) => {
-              const entries = filtered[category][itemName].slice(0, 10);
-              return (
-                <div key={idx} style={{
-                  padding: "10px 14px",
-                  borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none",
-                }}>
-                  <div style={{ fontWeight: 600, fontSize: "12px", marginBottom: "6px", color: "var(--text-primary)" }}>
-                    {itemName}
-                  </div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                    {entries.map((e, i) => (
-                      <div key={i} style={{
-                        display: "flex", alignItems: "center", gap: "4px",
-                        background: "var(--surface2)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius-sm)",
-                        padding: "3px 8px",
-                        fontSize: "10px",
-                      }}>
-                        <span style={{ color: "var(--text-muted)" }}>{e.date}</span>
-                        <span style={{ color: stockColor(e.stock), fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                          {String(e.stock)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
+            {Object.keys(filtered[category]).map((itemName, idx, arr) => (
+              <div key={idx} style={{ padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
+                <div style={{ fontWeight: 600, fontSize: "12px", marginBottom: "7px", color: "var(--text-primary)" }}>
+                  {itemName}
                 </div>
-              );
-            })}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                  {filtered[category][itemName].map((e, i) => (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center", gap: "5px",
+                      background: "var(--surface2)", border: "1px solid var(--border)",
+                      borderRadius: "var(--radius-sm)", padding: "3px 9px", fontSize: "11px",
+                    }}>
+                      <span style={{ color: stockColor(e.stock), fontWeight: 700, fontFamily: "var(--font-mono)" }}>
+                        {String(e.stock)}
+                      </span>
+                      <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>{e.date}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </Card>
         </div>
       ))}
+
+      <div style={{ textAlign: "center", fontSize: "10px", color: "var(--text-muted)", padding: "8px", marginTop: "4px" }}>
+        {t.historyFooter}
+      </div>
     </div>
   );
 }
