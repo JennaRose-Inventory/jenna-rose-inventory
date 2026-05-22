@@ -197,6 +197,16 @@ export default function App() {
 
   const todayDate = new Date().toLocaleDateString("en-GB");
 
+  const latestRecord = historyData[0];
+  const overviewSource = latestRecord?.items ?? [];
+  const overviewGrouped = overviewSource
+    .filter((item) => item.active !== false)
+    .reduce((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {});
+
   if (loading) {
     return <div style={{ padding: "20px" }}>Loading...</div>;
   }
@@ -341,53 +351,155 @@ export default function App() {
       )}
 
       {/* OVERVIEW */}
-      {page === "Overview" && (
-        <>
-          <div style={{ marginBottom: "12px" }}>
-            <div style={{ fontWeight: "bold", fontSize: "15px" }}>
-              Today Order Overview
-            </div>
-            <div style={{ fontSize: "11px", color: "#666" }}>{todayDate}</div>
-          </div>
+      {page === "Overview" && (() => {
+        // Take last 3 saved records (most recent first)
+        const records = historyData.slice(0, 3);
 
-          {Object.keys(groupedItems).map((category) => (
-            <div key={category} style={{ marginBottom: "14px" }}>
-              <div
-                style={{
+        if (records.length === 0) {
+          return (
+            <div style={{ fontSize: "12px", color: "#999", padding: "10px" }}>
+              No saved inventory yet. Fill in Count and press Save first.
+            </div>
+          );
+        }
+
+        // Build a lookup: record index → { "category||name": stock }
+        const recordMaps = records.map((rec) => {
+          const map = {};
+          (rec.items ?? []).forEach((item) => {
+            map[`${item.category}||${item.name}`] = item.stock;
+          });
+          return map;
+        });
+
+        // Collect all unique active items across all 3 records, preserving category order
+        const seenKeys = new Set();
+        const allItems = [];
+        records.forEach((rec) => {
+          (rec.items ?? []).forEach((item) => {
+            const key = `${item.category}||${item.name}`;
+            if (!seenKeys.has(key) && item.active !== false) {
+              seenKeys.add(key);
+              allItems.push({ category: item.category, name: item.name });
+            }
+          });
+        });
+
+        // Group by category
+        const grouped = allItems.reduce((acc, item) => {
+          if (!acc[item.category]) acc[item.category] = [];
+          acc[item.category].push(item);
+          return acc;
+        }, {});
+
+        function valColor(val) {
+          if (val === undefined || val === null || val === "") return "#bbb";
+          if (val === "Need Order") return "#c0392b";
+          if (val === "Enough") return "#2e7d32";
+          const n = Number(val);
+          if (!isNaN(n)) {
+            if (n <= 2) return "#c0392b";
+            if (n <= 6) return "#e67e22";
+            return "#2e7d32";
+          }
+          return "#555";
+        }
+
+        function valDisplay(val) {
+          if (val === undefined || val === null || val === "") return "-";
+          return String(val);
+        }
+
+        // Short date label: "22/05" from "22/05/2025"
+        function shortDate(dateStr) {
+          if (!dateStr) return "-";
+          const parts = dateStr.split("/");
+          return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : dateStr;
+        }
+
+        const colWidth = "36px";
+
+        return (
+          <>
+            {/* Header row with dates */}
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              padding: "0 10px 8px 10px",
+              marginBottom: "2px",
+            }}>
+              <div style={{ flex: 1 }} />
+              {records.map((rec, i) => (
+                <div key={i} style={{
+                  width: colWidth,
+                  textAlign: "center",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                  color: i === 0 ? "#6f4e37" : "#999",
+                  marginLeft: "6px",
+                  lineHeight: "13px",
+                }}>
+                  {shortDate(rec.date)}
+                  {i === 0 && (
+                    <div style={{ fontSize: "9px", color: "#aaa", fontWeight: "normal" }}>latest</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {Object.keys(grouped).map((category) => (
+              <div key={category} style={{ marginBottom: "14px" }}>
+                <div style={{
                   fontWeight: "bold",
                   marginBottom: "5px",
                   color: "#6f4e37",
                   fontSize: "13px",
-                }}
-              >
-                {category}
-              </div>
+                }}>
+                  {category}
+                </div>
 
-              <div style={{ background: "white", borderRadius: "10px", overflow: "hidden" }}>
-                {groupedItems[category].map((item, index) => (
-                  <div
-                    key={index}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "6px 10px",
-                      borderBottom: "1px solid #eee",
-                    }}
-                  >
-                    <div style={{ fontSize: "12px" }}>{item.name}</div>
-                    <div style={{ fontWeight: "bold", fontSize: "12px" }}>
-                      {counts[countKey(item)] !== undefined && counts[countKey(item)] !== ""
-                        ? counts[countKey(item)]
-                        : "-"}
-                    </div>
-                  </div>
-                ))}
+                <div style={{ background: "white", borderRadius: "10px", overflow: "hidden" }}>
+                  {grouped[category].map((item, index) => {
+                    const key = `${item.category}||${item.name}`;
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          padding: "6px 10px",
+                          borderBottom: "1px solid #eee",
+                        }}
+                      >
+                        <div style={{ flex: 1, fontSize: "11px", color: "#333", paddingRight: "6px" }}>
+                          {item.name}
+                        </div>
+                        {recordMaps.map((rmap, i) => {
+                          const val = rmap[key];
+                          const display = valDisplay(val);
+                          return (
+                            <div key={i} style={{
+                              width: colWidth,
+                              textAlign: "center",
+                              fontSize: "11px",
+                              fontWeight: i === 0 ? "bold" : "normal",
+                              color: valColor(val),
+                              marginLeft: "6px",
+                              opacity: i === 0 ? 1 : 0.65,
+                            }}>
+                              {display}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </>
-      )}
+            ))}
+          </>
+        );
+      })()}
 
       {/* HISTORY */}
       {page === "History" && (
