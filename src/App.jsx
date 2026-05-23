@@ -8,6 +8,7 @@ import { db } from "./firebase.js";
 import { itemsData } from "./data/items.js";
 import { countKey } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
+import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
 import Toast from "./components/Toast.jsx";
 
 import CountPage       from "./pages/CountPage.jsx";
@@ -84,6 +85,7 @@ function NameSetup({ onDone, t }) {
 export default function App() {
   const [lang, setLang]               = useState(() => localStorage.getItem("jr_lang") || "en");
   const [userName, setUserName]       = useState(() => localStorage.getItem("jr_user") || "");
+  const [suppliers, setSuppliers]     = useState(() => loadSuppliers());
   const [page, setPage]               = useState("Count");
   const [items, setItems]             = useState([]);
   const [counts, setCounts]           = useState({});
@@ -112,6 +114,11 @@ export default function App() {
   function handleNameDone(name) {
     localStorage.setItem("jr_user", name);
     setUserName(name);
+  }
+
+  function handleUpdateSuppliers(updated) {
+    saveSuppliers(updated);
+    setSuppliers(updated);
   }
 
   useEffect(() => { loadAll(); }, []);
@@ -236,11 +243,11 @@ export default function App() {
       {/* Page content */}
       <div style={{ flex: 1, padding: "16px 14px", paddingBottom: `calc(var(--nav-h) + 16px)`, overflowY: "auto" }}>
         {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} />}
-        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} />}
+        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} />}
         {page === "History"     && <HistoryPage     t={t} historyData={historyData} />}
         {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} />}
         {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} />}
-        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} />}
+        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} />}
       </div>
 
       {/* Bottom nav */}

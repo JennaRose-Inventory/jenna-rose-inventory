@@ -1,7 +1,106 @@
 import { useState } from "react";
 import { Card, SectionLabel, Select, Input, PrimaryBtn } from "../components/UI.jsx";
 
-export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName }) {
+const TYPE_OPTIONS = ["group", "phone", "copy"];
+const LANG_OPTIONS = ["zh", "en"];
+
+function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToast }) {
+  const isZH = t.appSub === "库存系统";
+  const [selCat, setSelCat] = useState(allCategories[0] ?? "");
+
+  const current = suppliers[selCat] ?? { type: "copy", contact: "", lang: "zh" };
+  const [form, setForm] = useState(current);
+
+  function handleCatChange(cat) {
+    setSelCat(cat);
+    setForm(suppliers[cat] ?? { type: "copy", contact: "", lang: "zh" });
+  }
+
+  function handleSave() {
+    const updated = { ...suppliers, [selCat]: { ...form, contact: form.contact.trim() } };
+    onUpdateSuppliers(updated);
+    onToast(isZH ? `"${selCat}" 供应商已更新 ✓` : `"${selCat}" supplier updated ✓`, "success");
+  }
+
+  const labelStyle = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
+
+  const typeLabel = {
+    group: isZH ? "WhatsApp Group 链接" : "WhatsApp Group Link",
+    phone: isZH ? "WhatsApp 号码"       : "WhatsApp Phone Number",
+    copy:  isZH ? "仅复制（无链接）"    : "Copy only (no link)",
+  };
+
+  const contactPlaceholder = {
+    group: "https://chat.whatsapp.com/xxx",
+    phone: isZH ? "60123456789（不用+）" : "60123456789 (no +)",
+    copy:  isZH ? "不需要填写" : "Not required",
+  };
+
+  return (
+    <Card style={{ padding: "14px" }}>
+      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
+        {isZH ? "每个 Category 配置对应的供应商联系方式。" : "Configure the supplier contact for each category."}
+      </div>
+
+      <div style={labelStyle}>{t.category}</div>
+      <div style={{ marginBottom: "10px" }}>
+        <Select value={selCat} onChange={(e) => handleCatChange(e.target.value)}>
+          {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </Select>
+      </div>
+
+      <div style={labelStyle}>{isZH ? "联系类型" : "Contact Type"}</div>
+      <div style={{ marginBottom: "10px" }}>
+        <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
+          {TYPE_OPTIONS.map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
+        </Select>
+      </div>
+
+      {form.type !== "copy" && (
+        <>
+          <div style={labelStyle}>{isZH ? "联系方式" : "Contact"}</div>
+          <div style={{ marginBottom: "10px" }}>
+            <Input
+              placeholder={contactPlaceholder[form.type]}
+              value={form.contact}
+              onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
+            />
+          </div>
+        </>
+      )}
+
+      <div style={labelStyle}>{isZH ? "消息语言" : "Message Language"}</div>
+      <div style={{ marginBottom: "14px" }}>
+        <Select value={form.lang} onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value }))}>
+          <option value="zh">中文</option>
+          <option value="en">English</option>
+        </Select>
+      </div>
+
+      {/* Preview */}
+      <div style={{
+        background: "var(--surface2)", border: "1px solid var(--border)",
+        borderRadius: "var(--radius-md)", padding: "10px 12px",
+        fontSize: "11px", color: "var(--text-muted)",
+        marginBottom: "14px", lineHeight: 1.6,
+      }}>
+        <div style={{ fontWeight: 600, marginBottom: "4px", color: "var(--text-secondary)" }}>
+          {isZH ? "消息预览：" : "Message preview:"}
+        </div>
+        {form.lang === "zh"
+          ? "你好，我想订以下货品：\n\n• item 1\n• item 2\n\n请确认，谢谢 🙏"
+          : "Hi, I'd like to order the following:\n\n• item 1\n• item 2\n\nPlease confirm, thank you 🙏"
+        }
+      </div>
+
+      <PrimaryBtn onClick={handleSave}>
+        {isZH ? "保存供应商设置" : "Save Supplier"}
+      </PrimaryBtn>
+    </Card>
+  );
+}
+
+export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName, suppliers, onUpdateSuppliers }) {
   const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
   const firstActive = items.find((i) => i.active !== false);
 
@@ -78,6 +177,18 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast,
             {t.nameConfirm}
           </PrimaryBtn>
         </Card>
+      </div>
+
+      {/* Supplier settings */}
+      <div>
+        <SectionLabel>📱 {t.appSub === "库存系统" ? "供应商设置" : "Supplier Settings"}</SectionLabel>
+        <SupplierSection
+          t={t}
+          allCategories={allCategories}
+          suppliers={suppliers}
+          onUpdateSuppliers={onUpdateSuppliers}
+          onToast={onToast}
+        />
       </div>
 
       {/* Change input type */}
