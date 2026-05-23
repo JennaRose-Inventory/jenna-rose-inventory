@@ -1,10 +1,5 @@
 import { useEffect, useState } from "react";
 
-/* ── Toast context-free component ───────────────────────────────────────────
-   Usage:  <Toast message="Saved!" type="success" onDone={() => setToast(null)} />
-   types:  "success" | "error" | "info"
-*/
-
 export default function Toast({ message, type = "success", onDone }) {
   const [leaving, setLeaving] = useState(false);
 
@@ -14,40 +9,35 @@ export default function Toast({ message, type = "success", onDone }) {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [onDone]);
 
-  const colors = {
-    success: { bg: "var(--green-600)", icon: "✓" },
-    error:   { bg: "var(--red-600)",   icon: "✕" },
-    info:    { bg: "var(--brown-500)", icon: "ℹ" },
+  const styles = {
+    success: { bg: "var(--green-700)",  icon: "✓" },
+    error:   { bg: "var(--red-700)",    icon: "✕" },
+    info:    { bg: "var(--brand-soft)", icon: "·" },
   };
-  const { bg, icon } = colors[type] ?? colors.success;
+  const { bg, icon } = styles[type] ?? styles.success;
 
   return (
     <div style={{
-      position: "fixed",
-      top: "16px",
-      right: "16px",
-      zIndex: 9999,
-      display: "flex",
-      alignItems: "center",
-      gap: "10px",
+      position: "fixed", top: "16px", left: "50%",
+      transform: "translateX(-50%)",
+      zIndex: 99999,
+      display: "flex", alignItems: "center", gap: "10px",
       background: bg,
       color: "#fff",
-      padding: "12px 16px",
-      borderRadius: "var(--radius-lg)",
+      padding: "11px 16px",
+      borderRadius: "var(--radius-full)",
       boxShadow: "var(--shadow-lg)",
-      fontSize: "14px",
-      fontWeight: 500,
-      maxWidth: "300px",
-      animation: leaving
-        ? "toastOut 0.35s ease forwards"
-        : "toastIn 0.35s ease both",
+      fontSize: "13px", fontWeight: 500,
+      letterSpacing: "-0.01em",
+      whiteSpace: "nowrap",
+      animation: leaving ? "toastOut 0.3s ease forwards" : "toastIn 0.3s cubic-bezier(0.16,1,0.3,1) both",
+      maxWidth: "calc(100vw - 32px)",
     }}>
       <span style={{
-        width: 22, height: 22,
-        borderRadius: "50%",
-        background: "rgba(255,255,255,0.25)",
+        width: 20, height: 20, borderRadius: "50%",
+        background: "rgba(255,255,255,0.2)",
         display: "flex", alignItems: "center", justifyContent: "center",
-        fontSize: "12px", fontWeight: 700, flexShrink: 0,
+        fontSize: "11px", fontWeight: 700, flexShrink: 0,
       }}>{icon}</span>
       {message}
     </div>
