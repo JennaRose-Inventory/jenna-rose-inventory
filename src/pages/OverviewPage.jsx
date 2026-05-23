@@ -238,14 +238,16 @@ export default function OverviewPage({ t, historyData, suppliers }) {
         <div style={{ flex: 1 }} />
         {records.map((rec, i) => (
           <div key={i} style={{ width: colW, textAlign: "center", marginLeft: "6px" }}>
-            <div style={{ fontSize: "11px", fontWeight: 700, color: i === 0 ? "var(--brown-700)" : "var(--text-muted)" }}>
+            <div style={{ fontSize: "11px", fontWeight: 600, color: i === 0 ? "var(--brand-soft)" : "var(--text-faint)" }}>
               {shortDate(rec.date)}
             </div>
-            <div style={{ fontSize: "9px", fontWeight: 600, color: i === 0 ? "var(--brown-400)" : "var(--text-muted)" }}>
+            <div style={{ fontSize: "9px", fontWeight: 500, color: i === 0 ? "var(--brand-light)" : "var(--text-faint)" }}>
               {i === 0 ? t.latest : t.yesterday}
             </div>
             {rec.savedBy && (
-              <div style={{ fontSize: "9px", color: "var(--text-muted)", marginTop: "1px" }}>👤 {rec.savedBy}</div>
+              <div style={{ fontSize: "9px", color: "var(--text-faint)", marginTop: "1px" }}>
+                {rec.savedBy}
+              </div>
             )}
           </div>
         ))}
@@ -262,18 +264,31 @@ export default function OverviewPage({ t, historyData, suppliers }) {
               </span>
               {supplier && (
                 <button onClick={() => setActiveModal(category)} style={{
-                  display: "flex", alignItems: "center", gap: "4px",
-                  padding: "3px 10px", borderRadius: 99,
-                  background: supplier.type === "copy" ? "var(--surface2)" : "#e7f8ee",
-                  border: `1px solid ${supplier.type === "copy" ? "var(--border)" : "#b7e4c7"}`,
+                  display: "flex", alignItems: "center", gap: "5px",
+                  padding: "4px 10px", borderRadius: 99,
+                  background: supplier.type === "copy" ? "var(--surface2)" : "#f0faf4",
+                  border: `1px solid ${supplier.type === "copy" ? "var(--border)" : "#a7d7b8"}`,
                   fontSize: "11px", fontWeight: 600,
                   color: supplier.type === "copy" ? "var(--text-secondary)" : "#1a7f37",
                   cursor: "pointer",
+                  letterSpacing: "-0.01em",
                 }}>
-                  {supplier.type === "copy" ? "📋" : "📱"}
+                  {supplier.type === "copy" ? (
+                    // Copy icon
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                  ) : (
+                    // WhatsApp icon
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                      <path d="M12 0C5.373 0 0 5.373 0 12c0 2.117.554 4.103 1.523 5.826L.057 23.927a.5.5 0 0 0 .609.61l6.102-1.466A11.945 11.945 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.886 0-3.655-.523-5.166-1.432l-.371-.22-3.844.924.942-3.844-.241-.389A9.96 9.96 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                    </svg>
+                  )}
                   {supplier.type === "copy"
-                    ? (isZH ? " 复制" : " Copy")
-                    : (isZH ? " 订货" : " Order")}
+                    ? (isZH ? "复制" : "Copy")
+                    : (isZH ? "订货" : "Order")}
                 </button>
               )}
             </div>
@@ -288,25 +303,70 @@ export default function OverviewPage({ t, historyData, suppliers }) {
                     display: "flex", alignItems: "center",
                     padding: "9px 14px",
                     borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none",
-                    background: low ? "var(--red-50)" : "transparent",
+                    background: "transparent",
                   }}>
-                    <div style={{ flex: 1, fontSize: "12px", color: low ? "var(--red-600)" : "var(--text-primary)", paddingRight: "6px", display: "flex", alignItems: "center", gap: "5px" }}>
-                      {low && <span style={{ fontSize: "10px", color: "var(--red-500)", fontWeight: 700 }}>!</span>}
+                    {/* Item name — subtle dot if low, name stays neutral */}
+                    <div style={{
+                      flex: 1, fontSize: "12px",
+                      color: "var(--text-primary)",
+                      paddingRight: "6px",
+                      display: "flex", alignItems: "center", gap: "7px",
+                    }}>
+                      {/* Low stock dot indicator */}
+                      {low && (
+                        <span style={{
+                          width: 5, height: 5, borderRadius: "50%",
+                          background: "var(--red-500)",
+                          flexShrink: 0,
+                          display: "inline-block",
+                          opacity: 0.85,
+                        }} />
+                      )}
                       {item.name}
                     </div>
+
+                    {/* Value columns */}
                     {recordMaps.map((rmap, i) => {
                       const val = rmap[key];
+                      const display = valDisplay(val);
                       const isNum = val !== undefined && val !== "" && !isNaN(Number(val));
+                      const isLatest = i === 0;
+                      const showPill = isLatest && low && display !== "—";
+
                       return (
                         <div key={i} style={{
                           width: colW, textAlign: "center", marginLeft: "6px",
-                          fontSize: i === 0 ? "13px" : "11px",
-                          fontWeight: i === 0 ? 700 : 400,
-                          fontFamily: isNum ? "var(--font-mono)" : "inherit",
-                          color: i === 0 ? stockColor(val) : "var(--text-muted)",
-                          opacity: i === 0 ? 1 : 0.55,
+                          display: "flex", alignItems: "center", justifyContent: "center",
                         }}>
-                          {valDisplay(val)}
+                          {showPill ? (
+                            // Low stock pill — only on latest column
+                            <span style={{
+                              display: "inline-flex", alignItems: "center", justifyContent: "center",
+                              minWidth: "32px", padding: "2px 8px",
+                              borderRadius: "var(--radius-full)",
+                              background: "var(--red-100)",
+                              border: "1px solid #fca5a5",
+                              fontSize: "12px", fontWeight: 700,
+                              color: "var(--red-700)",
+                              fontFamily: isNum ? "var(--font-mono)" : "inherit",
+                              letterSpacing: isNum ? "-0.02em" : "0",
+                            }}>
+                              {display}
+                            </span>
+                          ) : (
+                            <span style={{
+                              fontSize: isLatest ? "13px" : "11px",
+                              fontWeight: isLatest ? 600 : 400,
+                              fontFamily: isNum ? "var(--font-mono)" : "inherit",
+                              color: isLatest
+                                ? (display === "—" ? "var(--text-faint)" : stockColor(val))
+                                : "var(--text-faint)",
+                              opacity: isLatest ? 1 : 0.5,
+                              letterSpacing: isNum ? "-0.02em" : "0",
+                            }}>
+                              {display}
+                            </span>
+                          )}
                         </div>
                       );
                     })}
