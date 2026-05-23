@@ -336,7 +336,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
                     <input
                       ref={(el) => { inputRefs.current[key] = el; }}
                       type="number" inputMode="numeric"
-                      value={val} placeholder="—"
+                      value={val} placeholder=""
                       onChange={(e) => onCountChange(item, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(e, item)}
                       style={{

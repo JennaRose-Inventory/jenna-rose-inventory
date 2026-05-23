@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card, SectionLabel } from "../components/UI.jsx";
+import { Card } from "../components/UI.jsx";
 import { stockColor, isLowStock } from "../utils/helpers.js";
 
 function shortDate(dateStr) {
@@ -9,9 +9,9 @@ function shortDate(dateStr) {
 }
 
 export default function HistoryPage({ t, historyData }) {
-  const [search, setSearch] = useState("");
   const records = historyData.slice(0, 14);
 
+  // Build full map: { category: { name: [{ date, stock, savedBy }] } }
   const historyMap = {};
   records.forEach((record) => {
     (record.items ?? []).forEach((item) => {
@@ -28,34 +28,46 @@ export default function HistoryPage({ t, historyData }) {
     });
   });
 
-  const filtered = Object.keys(historyMap).reduce((acc, cat) => {
-    const names = Object.keys(historyMap[cat]).filter(
-      (n) => n.toLowerCase().includes(search.toLowerCase()) || cat.toLowerCase().includes(search.toLowerCase())
-    );
-    if (names.length) {
-      acc[cat] = {};
-      names.forEach((n) => { acc[cat][n] = historyMap[cat][n]; });
-    }
-    return acc;
-  }, {});
+  const categories = Object.keys(historyMap);
+  const [activeTab, setActiveTab] = useState(categories[0] ?? "");
+  const [search, setSearch] = useState("");
+
+  // Filter items within active tab
+  const tabItems = historyMap[activeTab] ?? {};
+  const filtered = search
+    ? Object.fromEntries(
+        Object.entries(tabItems).filter(([name]) =>
+          name.toLowerCase().includes(search.toLowerCase())
+        )
+      )
+    : tabItems;
 
   function stockDisplay(val) {
-    if (val === "Enough") return { label: "✓", color: "var(--green-500)" };
-    if (val === "Need Order") return { label: "⚠ Need Order", color: "var(--red-600)" };
+    if (val === "Enough")     return { label: "✓",            color: "var(--green-500)" };
+    if (val === "Need Order") return { label: "⚠ Need Order", color: "var(--red-600)"  };
     return { label: String(val), color: stockColor(val) };
   }
 
+  if (categories.length === 0) {
+    return (
+      <div className="page-enter" style={{ textAlign: "center", padding: "48px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
+        {t.noHistory}
+      </div>
+    );
+  }
+
   return (
-    <div className="page-enter">
+    <div className="page-enter" style={{ paddingBottom: "24px" }}>
+
       {/* Search */}
-      <div style={{ position: "relative", marginBottom: "16px" }}>
-        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", pointerEvents: "none", opacity: 0.4 }}>⌕</span>
+      <div style={{ position: "relative", marginBottom: "12px" }}>
+        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "13px", opacity: 0.35, pointerEvents: "none" }}>⌕</span>
         <input
           placeholder={t.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            width: "100%", padding: "10px 12px 10px 34px",
+            width: "100%", padding: "9px 12px 9px 32px",
             borderRadius: "var(--radius-md)",
             border: "1.5px solid var(--border)",
             background: "var(--surface)",
@@ -65,70 +77,87 @@ export default function HistoryPage({ t, historyData }) {
         />
       </div>
 
-      {Object.keys(filtered).length === 0 && (
-        <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
+      {/* Category tab bar — horizontal scroll */}
+      <div style={{
+        display: "flex", gap: "6px",
+        overflowX: "auto", paddingBottom: "2px",
+        marginBottom: "14px", scrollbarWidth: "none",
+      }}>
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => { setActiveTab(cat); setSearch(""); }}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "var(--radius-full)",
+              background: activeTab === cat ? "var(--brand)" : "var(--surface)",
+              color: activeTab === cat ? "#fff" : "var(--text-muted)",
+              fontSize: "11px", fontWeight: activeTab === cat ? 700 : 500,
+              border: `1.5px solid ${activeTab === cat ? "var(--brand)" : "var(--border)"}`,
+              whiteSpace: "nowrap", flexShrink: 0,
+              transition: "all 0.15s",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            {cat}
+          </button>
+        ))}
+      </div>
+
+      {/* Items in active tab */}
+      {Object.keys(filtered).length === 0 ? (
+        <div style={{ textAlign: "center", padding: "32px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
           {search ? t.noMatch : t.noHistory}
         </div>
+      ) : (
+        <Card>
+          {Object.keys(filtered).map((itemName, idx, arr) => {
+            const entries = filtered[itemName];
+            return (
+              <div key={idx} style={{ borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
+                {/* Item name */}
+                <div style={{ padding: "10px 14px 4px", fontWeight: 600, fontSize: "12px", color: "var(--text-primary)" }}>
+                  {itemName}
+                </div>
+                {/* Entries */}
+                {entries.map((e, i) => {
+                  const { label, color } = stockDisplay(e.stock);
+                  const low = isLowStock({ stock: e.stock });
+                  return (
+                    <div key={i} style={{
+                      display: "flex", alignItems: "center",
+                      padding: "7px 14px 7px 20px",
+                      background: i % 2 === 0 ? "transparent" : "var(--surface2)",
+                      borderTop: "1px solid var(--border)",
+                    }}>
+                      <div style={{ fontSize: "11px", color: "var(--text-faint)", width: "40px", flexShrink: 0 }}>
+                        {e.date}
+                      </div>
+                      <div style={{ flex: 1, fontSize: "10px", color: "var(--text-faint)", paddingLeft: "8px" }}>
+                        {e.savedBy || ""}
+                      </div>
+                      <div style={{
+                        fontSize: "12px", fontWeight: 700,
+                        fontFamily: "var(--font-mono)",
+                        color,
+                        background: low ? "var(--red-100)" : "transparent",
+                        padding: low ? "2px 8px" : "0",
+                        borderRadius: low ? "var(--radius-full)" : "0",
+                        border: low ? "1px solid #fca5a5" : "none",
+                      }}>
+                        {label}
+                      </div>
+                    </div>
+                  );
+                })}
+                <div style={{ height: "4px" }} />
+              </div>
+            );
+          })}
+        </Card>
       )}
 
-      {Object.keys(filtered).map((category) => (
-        <div key={category} style={{ marginBottom: "16px" }}>
-          <SectionLabel>{category}</SectionLabel>
-          <Card>
-            {Object.keys(filtered[category]).map((itemName, idx, arr) => {
-              const entries = filtered[category][itemName];
-              return (
-                <div key={idx} style={{ borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
-                  {/* Item name header */}
-                  <div style={{ padding: "10px 14px 6px", fontWeight: 600, fontSize: "12px", color: "var(--text-primary)" }}>
-                    {itemName}
-                  </div>
-                  {/* One row per entry */}
-                  {entries.map((e, i) => {
-                    const { label, color } = stockDisplay(e.stock);
-                    const low = isLowStock({ stock: e.stock });
-                    return (
-                      <div key={i} style={{
-                        display: "flex", alignItems: "center",
-                        padding: "7px 14px 7px 20px",
-                        background: i % 2 === 0 ? "transparent" : "var(--surface2)",
-                        borderTop: "1px solid var(--border)",
-                      }}>
-                        {/* Date */}
-                        <div style={{ fontSize: "11px", color: "var(--text-faint)", width: "44px", flexShrink: 0 }}>
-                          {e.date}
-                        </div>
-                        {/* Staff */}
-                        {e.savedBy && (
-                          <div style={{ fontSize: "10px", color: "var(--text-faint)", flex: 1, paddingLeft: "8px" }}>
-                            {e.savedBy}
-                          </div>
-                        )}
-                        {!e.savedBy && <div style={{ flex: 1 }} />}
-                        {/* Stock value */}
-                        <div style={{
-                          fontSize: "12px", fontWeight: 700,
-                          fontFamily: "var(--font-mono)",
-                          color,
-                          background: low ? "var(--red-100)" : "transparent",
-                          padding: low ? "2px 8px" : "0",
-                          borderRadius: low ? "var(--radius-full)" : "0",
-                          border: low ? "1px solid #fca5a5" : "none",
-                        }}>
-                          {label}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  <div style={{ height: "4px" }} />
-                </div>
-              );
-            })}
-          </Card>
-        </div>
-      ))}
-
-      <div style={{ textAlign: "center", fontSize: "10px", color: "var(--text-faint)", padding: "8px", marginTop: "4px" }}>
+      <div style={{ textAlign: "center", fontSize: "10px", color: "var(--text-faint)", padding: "10px 8px 0" }}>
         {t.historyFooter}
       </div>
     </div>
