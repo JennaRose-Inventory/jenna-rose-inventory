@@ -22,67 +22,29 @@ import ManagePage      from "./pages/ManagePage.jsx";
 const MAX_HISTORY = 14;
 
 // ── Name setup screen ─────────────────────────────────────────────────────────
-function NameSetup({ onDone, t }) {
+function NameSetup({ onDone, t, lang, onToggleLang }) {
   const [name, setName] = useState("");
   return (
-    <div style={{
-      minHeight: "100dvh", background: "var(--bg)",
-      display: "flex", alignItems: "center", justifyContent: "center", padding: "24px",
-    }}>
-      <div style={{
-        background: "var(--surface)",
-        borderRadius: "var(--radius-xl)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-lg)",
-        padding: "36px 28px",
-        width: "100%", maxWidth: "340px",
-        textAlign: "center",
-      }}>
-        {/* Logo */}
-        <div style={{
-          width: 56, height: 56, borderRadius: "16px",
-          background: "var(--brand)", margin: "0 auto 18px",
-          display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
+    <div style={{ minHeight: "100dvh", background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div style={{ background: "var(--surface)", borderRadius: "var(--radius-xl)", border: "1px solid var(--border)", boxShadow: "var(--shadow-lg)", padding: "36px 28px", width: "100%", maxWidth: "340px", textAlign: "center" }}>
+        {/* Lang toggle top right */}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+          <button onClick={onToggleLang} style={{ fontSize: "12px", fontWeight: 600, color: "var(--text-muted)", background: "var(--surface2)", border: "1.5px solid var(--border)", borderRadius: "var(--radius-full)", padding: "4px 12px", cursor: "pointer" }}>
+            {lang === "en" ? "🇨🇳 中文" : "🇬🇧 EN"}
+          </button>
+        </div>
+        <div style={{ width: 56, height: 56, borderRadius: "16px", background: "var(--brand)", margin: "0 auto 18px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Icon name="coffee" size={26} color="#fff" strokeWidth={1.5} />
         </div>
-        <div style={{ fontWeight: 700, fontSize: "20px", color: "var(--text-primary)", marginBottom: "4px", letterSpacing: "-0.03em" }}>
-          Jenna Rose
-        </div>
-        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "28px" }}>
-          {t.namePrompt}
-        </div>
+        <div style={{ fontWeight: 700, fontSize: "20px", color: "var(--text-primary)", marginBottom: "4px", letterSpacing: "-0.03em" }}>Jenna Rose</div>
+        <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "28px" }}>{t.namePrompt}</div>
         <input
-          autoFocus
-          placeholder={t.namePlaceholder}
-          value={name}
+          autoFocus placeholder={t.namePlaceholder} value={name}
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && name.trim()) onDone(name.trim()); }}
-          style={{
-            width: "100%", padding: "13px 16px",
-            borderRadius: "var(--radius-sm)",
-            border: "1.5px solid var(--border)",
-            background: "var(--surface2)",
-            fontSize: "15px", color: "var(--text-primary)",
-            textAlign: "center", fontWeight: 600,
-            boxSizing: "border-box", marginBottom: "12px",
-            letterSpacing: "-0.01em",
-          }}
+          style={{ width: "100%", padding: "13px 16px", borderRadius: "var(--radius-sm)", border: "1.5px solid var(--border)", background: "var(--surface2)", fontSize: "15px", color: "var(--text-primary)", textAlign: "center", fontWeight: 600, boxSizing: "border-box", marginBottom: "12px", letterSpacing: "-0.01em" }}
         />
-        <button
-          onClick={() => { if (name.trim()) onDone(name.trim()); }}
-          disabled={!name.trim()}
-          style={{
-            width: "100%", padding: "13px",
-            borderRadius: "var(--radius-sm)",
-            background: "var(--brand)",
-            color: "#fff", fontSize: "14px", fontWeight: 600,
-            opacity: name.trim() ? 1 : 0.35,
-            transition: "opacity 0.15s",
-            letterSpacing: "-0.01em",
-            boxShadow: "var(--shadow-sm)",
-          }}
-        >
+        <button onClick={() => { if (name.trim()) onDone(name.trim()); }} disabled={!name.trim()} style={{ width: "100%", padding: "13px", borderRadius: "var(--radius-sm)", background: "var(--brand)", color: "#fff", fontSize: "14px", fontWeight: 600, opacity: name.trim() ? 1 : 0.35, transition: "opacity 0.15s", letterSpacing: "-0.01em", boxShadow: "var(--shadow-sm)", border: "none" }}>
           {t.nameConfirm}
         </button>
       </div>
@@ -179,7 +141,7 @@ export default function App() {
   function showToast(message, type = "success") { setToast({ message, type, key: Date.now() }); }
   function handleCountChange(item, value) { setCounts((prev) => ({ ...prev, [countKey(item)]: value })); }
 
-  if (!userName) return <NameSetup onDone={handleNameDone} t={t} />;
+  if (!userName) return <NameSetup onDone={handleNameDone} t={t} lang={lang} onToggleLang={toggleLang} />;
 
   if (loading) {
     return (
@@ -255,7 +217,7 @@ export default function App() {
 
       {/* ── Page content ── */}
       <div style={{ flex: 1, padding: "16px 14px", paddingBottom: `calc(var(--nav-h) + 16px)`, overflowY: "auto" }}>
-        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} />}
+        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} historyData={historyData} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} />}
         {page === "History"     && <HistoryPage     t={t} historyData={historyData} />}
         {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} />}

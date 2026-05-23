@@ -218,6 +218,7 @@ export default function OverviewPage({ t, historyData, suppliers }) {
 
   const modalItems = activeModal ? (grouped[activeModal] ?? []) : [];
   const isZH = t.appSub === "库存系统";
+  const lowCount = Object.values(recordMaps[0] ?? {}).filter(v => isLowStock({ stock: v })).length;
 
   return (
     <div className="page-enter">
@@ -231,6 +232,24 @@ export default function OverviewPage({ t, historyData, suppliers }) {
           t={t}
           supplier={suppliers?.[activeModal] ?? null}
         />
+      )}
+
+      {/* Low stock banner */}
+      {lowCount > 0 && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: "10px",
+          background: "var(--red-50)", border: "1px solid #fca5a5",
+          borderRadius: "var(--radius-md)", padding: "10px 14px",
+          marginBottom: "14px",
+        }}>
+          <div style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--red-500)", flexShrink: 0 }} />
+          <div style={{ flex: 1, fontSize: "12px", color: "var(--red-700)", fontWeight: 600 }}>
+            {isZH ? `${lowCount} 项库存不足` : `${lowCount} item${lowCount > 1 ? "s" : ""} low on stock`}
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--red-500)" }}>
+            {isZH ? "以红色标注 ↓" : "marked below ↓"}
+          </div>
+        </div>
       )}
 
       {/* Date header */}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Card, SectionLabel } from "../components/UI.jsx";
-import { stockColor } from "../utils/helpers.js";
+import { stockColor, isLowStock } from "../utils/helpers.js";
 
 function shortDate(dateStr) {
   if (!dateStr) return "";
@@ -39,21 +39,28 @@ export default function HistoryPage({ t, historyData }) {
     return acc;
   }, {});
 
+  function stockDisplay(val) {
+    if (val === "Enough") return { label: "✓", color: "var(--green-500)" };
+    if (val === "Need Order") return { label: "⚠ Need Order", color: "var(--red-600)" };
+    return { label: String(val), color: stockColor(val) };
+  }
+
   return (
     <div className="page-enter">
+      {/* Search */}
       <div style={{ position: "relative", marginBottom: "16px" }}>
-        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", pointerEvents: "none" }}>🔍</span>
+        <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", fontSize: "14px", pointerEvents: "none", opacity: 0.4 }}>⌕</span>
         <input
           placeholder={t.searchPlaceholder}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
-            width: "100%", padding: "10px 12px 10px 36px",
-            borderRadius: "var(--radius-lg)",
+            width: "100%", padding: "10px 12px 10px 34px",
+            borderRadius: "var(--radius-md)",
             border: "1.5px solid var(--border)",
             background: "var(--surface)",
             fontSize: "13px", color: "var(--text-primary)",
-            boxSizing: "border-box", boxShadow: "var(--shadow-sm)",
+            boxSizing: "border-box", boxShadow: "var(--shadow-xs)",
           }}
         />
       </div>
@@ -68,37 +75,60 @@ export default function HistoryPage({ t, historyData }) {
         <div key={category} style={{ marginBottom: "16px" }}>
           <SectionLabel>{category}</SectionLabel>
           <Card>
-            {Object.keys(filtered[category]).map((itemName, idx, arr) => (
-              <div key={idx} style={{ padding: "10px 14px", borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
-                <div style={{ fontWeight: 600, fontSize: "12px", marginBottom: "7px", color: "var(--text-primary)" }}>
-                  {itemName}
+            {Object.keys(filtered[category]).map((itemName, idx, arr) => {
+              const entries = filtered[category][itemName];
+              return (
+                <div key={idx} style={{ borderBottom: idx < arr.length - 1 ? "1px solid var(--border)" : "none" }}>
+                  {/* Item name header */}
+                  <div style={{ padding: "10px 14px 6px", fontWeight: 600, fontSize: "12px", color: "var(--text-primary)" }}>
+                    {itemName}
+                  </div>
+                  {/* One row per entry */}
+                  {entries.map((e, i) => {
+                    const { label, color } = stockDisplay(e.stock);
+                    const low = isLowStock({ stock: e.stock });
+                    return (
+                      <div key={i} style={{
+                        display: "flex", alignItems: "center",
+                        padding: "7px 14px 7px 20px",
+                        background: i % 2 === 0 ? "transparent" : "var(--surface2)",
+                        borderTop: "1px solid var(--border)",
+                      }}>
+                        {/* Date */}
+                        <div style={{ fontSize: "11px", color: "var(--text-faint)", width: "44px", flexShrink: 0 }}>
+                          {e.date}
+                        </div>
+                        {/* Staff */}
+                        {e.savedBy && (
+                          <div style={{ fontSize: "10px", color: "var(--text-faint)", flex: 1, paddingLeft: "8px" }}>
+                            {e.savedBy}
+                          </div>
+                        )}
+                        {!e.savedBy && <div style={{ flex: 1 }} />}
+                        {/* Stock value */}
+                        <div style={{
+                          fontSize: "12px", fontWeight: 700,
+                          fontFamily: "var(--font-mono)",
+                          color,
+                          background: low ? "var(--red-100)" : "transparent",
+                          padding: low ? "2px 8px" : "0",
+                          borderRadius: low ? "var(--radius-full)" : "0",
+                          border: low ? "1px solid #fca5a5" : "none",
+                        }}>
+                          {label}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  <div style={{ height: "4px" }} />
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
-                  {filtered[category][itemName].map((e, i) => (
-                    <div key={i} style={{
-                      display: "flex", alignItems: "center", gap: "5px",
-                      background: "var(--surface2)", border: "1px solid var(--border)",
-                      borderRadius: "var(--radius-sm)", padding: "3px 9px", fontSize: "11px",
-                    }}>
-                      <span style={{ color: stockColor(e.stock), fontWeight: 700, fontFamily: "var(--font-mono)" }}>
-                        {String(e.stock)}
-                      </span>
-                      <span style={{ color: "var(--text-muted)", fontSize: "10px" }}>{e.date}</span>
-                      {e.savedBy && (
-                        <span style={{ color: "var(--text-muted)", fontSize: "9px", opacity: 0.65 }}>
-                          · {e.savedBy}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </Card>
         </div>
       ))}
 
-      <div style={{ textAlign: "center", fontSize: "10px", color: "var(--text-muted)", padding: "8px", marginTop: "4px" }}>
+      <div style={{ textAlign: "center", fontSize: "10px", color: "var(--text-faint)", padding: "8px", marginTop: "4px" }}>
         {t.historyFooter}
       </div>
     </div>
