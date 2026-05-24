@@ -110,7 +110,7 @@ function DaySwitchWarning({ onConfirm, onCancel, t }) {
 }
 
 // ── Main CountPage ────────────────────────────────────────────────────────────
-export default function CountPage({ t, items, counts, onCountChange, onSave, historyData = [] }) {
+export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord }) {
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const [selectedDay, setSelectedDay] = useState(EN_DAYS[todayIdx]);
   const [saving, setSaving]           = useState(false);
@@ -166,7 +166,8 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
   function confirmDaySwitch() {
     setSelectedDay(pendingDay);
     setPendingDay(null);
-    activeItems.forEach(item => onCountChange(item, ""));
+    // Clear ALL counts, not just current day's items
+    onClearCounts();
   }
 
   async function handleSave() {
@@ -174,7 +175,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
     const filledItems = activeItems
       .filter(i => counts[countKey(i)] !== undefined && counts[countKey(i)] !== "")
       .map(i => ({ name: i.name, category: i.category, stock: counts[countKey(i)] }));
-    await onSave(selectedDay); // pass selectedDay to App
+    await onSave(selectedDay);
     setSaving(false);
     if (filledItems.length > 0) setSummary(filledItems);
   }
@@ -206,6 +207,25 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
           );
         })}
       </div>
+
+      {/* Today already saved banner */}
+      {todayRecord && !isWrongDay && filledCount === 0 && (
+        <div style={{
+          display:"flex", alignItems:"center", gap:"10px",
+          background:"var(--green-50)", border:"1px solid var(--green-100)",
+          borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"12px",
+        }}>
+          <span style={{ fontSize:"15px" }}>✓</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontSize:"12px", fontWeight:600, color:"var(--green-700)" }}>
+              {isZH ? `今天已由 ${todayRecord.savedBy} 保存` : `Saved today by ${todayRecord.savedBy}`}
+            </div>
+            <div style={{ fontSize:"10px", color:"var(--green-600)", marginTop:"1px", opacity:0.8 }}>
+              {todayRecord.time ?? ""} · {isZH ? "可以继续填写再次保存" : "You can fill in and save again"}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Wrong day warning banner */}
       {isWrongDay && (
