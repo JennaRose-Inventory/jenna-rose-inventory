@@ -244,7 +244,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   const isZH = t.appSub === "库存系统";
   const supplierNames = Object.keys(suppliers);
 
-  const [subTab, setSubTab] = useState("edit");
+  const [openSection, setOpenSection] = useState(null);
   const [selCat, setSelCat] = useState(supplierNames[0] ?? allCategories[0] ?? "");
 
   function buildForm(cat) {
@@ -344,7 +344,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [] });
     setSelCat(name);
     setForm({ type: updated[name].type, contact: updated[name].contact, lang: updated[name].lang, days });
-    setSubTab("edit");
+    setOpenSection("edit");
     onToast(isZH ? `"${name}" 已添加 ✓` : `"${name}" added ✓`, "success");
   }
 
@@ -379,149 +379,136 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     );
   }
 
-  const subTabs = [
-    { id: "edit", label: isZH ? "编辑供应商" : "Edit" },
-    { id: "add",  label: isZH ? "添加供应商" : "Add New" },
-  ];
+  const supplierCount = Object.keys(suppliers).length;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-      {/* Sub-tab bar */}
-      <div style={{ display: "flex", gap: "6px", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", padding: "3px" }}>
-        {subTabs.map(({ id, label }) => (
-          <button key={id} onClick={() => setSubTab(id)} style={{
-            flex: 1, padding: "7px 4px", borderRadius: "var(--radius-xs)",
-            background: subTab === id ? "var(--surface)" : "transparent",
-            color: subTab === id ? "var(--brand)" : "var(--text-muted)",
-            fontSize: "12px", fontWeight: subTab === id ? 700 : 400,
-            border: subTab === id ? "1px solid var(--border)" : "1px solid transparent",
-            boxShadow: subTab === id ? "var(--shadow-xs)" : "none",
-            transition: "all 0.12s",
-          }}>{label}</button>
-        ))}
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+
+      {/* Summary pill */}
+      <div style={{ display: "flex", gap: "8px", marginBottom: "4px" }}>
+        <div style={{ fontSize: "11px", color: "var(--text-faint)", background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: "var(--radius-full)", padding: "3px 10px" }}>
+          {supplierCount} {isZH ? "个供应商" : "suppliers"}
+        </div>
       </div>
 
-      {/* Edit existing supplier */}
-      {subTab === "edit" && (
-        <Card style={{ padding: "14px" }}>
-          <div style={L}>{isZH ? "选择供应商" : "Select Supplier"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Select value={selCat} onChange={(e) => handleCatChange(e.target.value)}>
-              {Object.keys(suppliers).map((c) => <option key={c} value={c}>{c}</option>)}
-              {Object.keys(suppliers).length === 0 && <option value="">{isZH ? "无供应商" : "No suppliers"}</option>}
-            </Select>
-          </div>
+      {/* ── Edit Supplier ── */}
+      <Accordion
+        icon="✏️"
+        title={isZH ? "编辑供应商" : "Edit Supplier"}
+        desc={isZH ? "更改联系方式或下单日" : "Update contact or order days"}
+        open={openSection === "edit"}
+        onToggle={() => setOpenSection(p => p === "edit" ? null : "edit")}
+      >
+        <div style={L}>{isZH ? "选择供应商" : "Select Supplier"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={selCat} onChange={(e) => handleCatChange(e.target.value)}>
+            {Object.keys(suppliers).map((c) => <option key={c} value={c}>{c}</option>)}
+            {Object.keys(suppliers).length === 0 && <option value="">{isZH ? "无供应商" : "No suppliers"}</option>}
+          </Select>
+        </div>
 
-          <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
-              {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
-            </Select>
-          </div>
+        <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
+            {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
+          </Select>
+        </div>
 
-          {form.type !== "copy" && (
-            <>
-              <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
-              <div style={{ marginBottom: "4px" }}>
-                <Input
-                  placeholder={form.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
-                  value={form.contact ?? ""}
-                  onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
-                />
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
-                {form.type === "phone"
-                  ? (isZH ? "格式：60123456789（马来西亚号码，不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
-                  : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
-              </div>
-            </>
-          )}
+        {form.type !== "copy" && (
+          <>
+            <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                placeholder={form.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
+                value={form.contact ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
+              {form.type === "phone"
+                ? (isZH ? "格式：60123456789（不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
+                : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
+            </div>
+          </>
+        )}
 
-          <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Select value={form.lang ?? "zh"} onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value }))}>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </Select>
-          </div>
+        <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={form.lang ?? "zh"} onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value }))}>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </Select>
+        </div>
 
-          <div style={L}>{isZH ? "下单日（显示在 Overview）" : "Order Days (shown in Overview)"}</div>
-          <DayPicker
-            value={form.days ?? []}
-            onChange={(day) => toggleDay(day, setForm)}
+        <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
+        <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
+          <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
+        </div>
+      </Accordion>
+
+      {/* ── Add Supplier ── */}
+      <Accordion
+        icon="➕"
+        title={isZH ? "添加供应商" : "Add Supplier"}
+        desc={isZH ? "新增供应商联系方式" : "Add a new supplier contact"}
+        open={openSection === "add"}
+        onToggle={() => setOpenSection(p => p === "add" ? null : "add")}
+      >
+        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
+          {isZH ? "添加新的供应商 category 和联系方式。" : "Add a new supplier with contact details."}
+        </div>
+
+        <div style={L}>{isZH ? "供应商名称（Category 名）" : "Supplier Name (Category)"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Input
+            placeholder={isZH ? "例：New Supplier" : "e.g. New Supplier"}
+            value={newSupplier.name}
+            onChange={(e) => setNewSupplier((p) => ({ ...p, name: e.target.value }))}
           />
+        </div>
 
-          <div style={{ display: "flex", gap: "8px" }}>
-            <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>
-              {isZH ? "保存更改" : "Save Changes"}
-            </PrimaryBtn>
-            <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>
-              {isZH ? "删除" : "Delete"}
-            </PrimaryBtn>
-          </div>
-        </Card>
-      )}
+        <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={newSupplier.type} onChange={(e) => setNewSupplier((p) => ({ ...p, type: e.target.value, contact: "" }))}>
+            {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
+          </Select>
+        </div>
 
-      {/* Add new supplier */}
-      {subTab === "add" && (
-        <Card style={{ padding: "14px" }}>
-          <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
-            {isZH ? "添加新的供应商 category 和联系方式。" : "Add a new supplier with contact details."}
-          </div>
+        {newSupplier.type !== "copy" && (
+          <>
+            <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                placeholder={newSupplier.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
+                value={newSupplier.contact}
+                onChange={(e) => setNewSupplier((p) => ({ ...p, contact: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
+              {newSupplier.type === "phone"
+                ? (isZH ? "格式：60123456789（不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
+                : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
+            </div>
+          </>
+        )}
 
-          <div style={L}>{isZH ? "供应商名称（Category 名）" : "Supplier Name (Category)"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Input
-              placeholder={isZH ? "例：New Supplier" : "e.g. New Supplier"}
-              value={newSupplier.name}
-              onChange={(e) => setNewSupplier((p) => ({ ...p, name: e.target.value }))}
-            />
-          </div>
+        <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={newSupplier.lang} onChange={(e) => setNewSupplier((p) => ({ ...p, lang: e.target.value }))}>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </Select>
+        </div>
 
-          <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Select value={newSupplier.type} onChange={(e) => setNewSupplier((p) => ({ ...p, type: e.target.value, contact: "" }))}>
-              {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
-            </Select>
-          </div>
+        <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
+        <DayPicker value={newSupplier.days} onChange={(day) => toggleDay(day, setNewSupplier)} />
 
-          {newSupplier.type !== "copy" && (
-            <>
-              <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
-              <div style={{ marginBottom: "4px" }}>
-                <Input
-                  placeholder={newSupplier.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
-                  value={newSupplier.contact}
-                  onChange={(e) => setNewSupplier((p) => ({ ...p, contact: e.target.value }))}
-                />
-              </div>
-              <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
-                {newSupplier.type === "phone"
-                  ? (isZH ? "格式：60123456789（马来西亚号码，不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
-                  : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
-              </div>
-            </>
-          )}
+        <PrimaryBtn onClick={handleAddSupplier}>{isZH ? "添加供应商" : "Add Supplier"}</PrimaryBtn>
+      </Accordion>
 
-          <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
-          <div style={{ marginBottom: "10px" }}>
-            <Select value={newSupplier.lang} onChange={(e) => setNewSupplier((p) => ({ ...p, lang: e.target.value }))}>
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-            </Select>
-          </div>
-
-          <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
-          <DayPicker
-            value={newSupplier.days}
-            onChange={(day) => toggleDay(day, setNewSupplier)}
-          />
-
-          <PrimaryBtn onClick={handleAddSupplier}>
-            {isZH ? "添加供应商" : "Add Supplier"}
-          </PrimaryBtn>
-        </Card>
-      )}
     </div>
   );
 }
