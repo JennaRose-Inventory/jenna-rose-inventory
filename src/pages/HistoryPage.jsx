@@ -32,6 +32,12 @@ export default function HistoryPage({ t, historyData }) {
   const [activeTab, setActiveTab] = useState(categories[0] ?? "");
   const [search, setSearch] = useState("");
 
+  // Fix #7: clear search when switching category tab
+  function handleTabChange(cat) {
+    setActiveTab(cat);
+    setSearch("");
+  }
+
   // Filter items within active tab
   const tabItems = historyMap[activeTab] ?? {};
   const filtered = search
@@ -86,7 +92,7 @@ export default function HistoryPage({ t, historyData }) {
         {categories.map((cat) => (
           <button
             key={cat}
-            onClick={() => { setActiveTab(cat); setSearch(""); }}
+            onClick={() => handleTabChange(cat)}
             style={{
               padding: "6px 12px",
               borderRadius: "var(--radius-full)",

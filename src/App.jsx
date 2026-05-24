@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   collection, addDoc, getDocs, deleteDoc, updateDoc,
   query, orderBy, doc,
@@ -19,7 +19,7 @@ import DashboardPage   from "./pages/DashboardPage.jsx";
 import PredictionsPage from "./pages/PredictionsPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
 
-const MAX_HISTORY      = 14;
+const MAX_HISTORY       = 14;
 const ITEMS_STORAGE_KEY = "jr_items_v1";
 
 // ── Persist items ─────────────────────────────────────────────────────────────
@@ -29,20 +29,31 @@ function loadItems() {
     if (saved) {
       const parsed = JSON.parse(saved);
       const savedMap = {};
-      parsed.forEach(i => { savedMap[`${i.category}||${i.name}`] = i; });
+      // Key by original name AND new name to handle renames
+      parsed.forEach(i => {
+        savedMap[`${i.category}||${i.name}`] = i;
+        if (i._origName) savedMap[`${i.category}||${i._origName}`] = i;
+      });
       const merged = itemsData.map(item => {
         const key = `${item.category}||${item.name}`;
         return savedMap[key] ? { ...item, ...savedMap[key] } : item;
       });
+      // Add custom items not in itemsData
       parsed.forEach(item => {
-        const key = `${item.category}||${item.name}`;
-        if (!itemsData.find(i => `${i.category}||${i.name}` === key)) merged.push(item);
+        const key  = `${item.category}||${item.name}`;
+        const orig = `${item.category}||${item._origName}`;
+        const inBase = itemsData.find(i =>
+          `${i.category}||${i.name}` === key ||
+          `${i.category}||${i.name}` === orig
+        );
+        if (!inBase) merged.push(item);
       });
       return merged;
     }
   } catch {}
   return [...itemsData];
 }
+
 function persistItems(items) {
   try { localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items)); } catch {}
 }
@@ -55,7 +66,10 @@ function useOnline() {
     const off = () => setOnline(false);
     window.addEventListener("online",  on);
     window.addEventListener("offline", off);
-    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+    return () => {
+      window.removeEventListener("online",  on);
+      window.removeEventListener("offline", off);
+    };
   }, []);
   return online;
 }
@@ -104,6 +118,9 @@ export default function App() {
   const isOnline = useOnline();
   const t = STRINGS[lang];
 
+  // Use ref for reloadHistory to avoid stale closure in setInterval — fix #2
+  const reloadHistoryRef = useRef(null);
+
   const allCategories = [...new Set([
     ...itemsData.map((i) => i.category),
     ...Object.keys(suppliers),
@@ -124,9 +141,7 @@ export default function App() {
     setItemsState(val);
   }
 
-  // Clear ALL counts (not just active items of current day)
   function clearAllCounts() { setCounts({}); }
-
   function toggleLang() {
     const next = lang === "en" ? "zh" : "en";
     setLang(next); localStorage.setItem("jr_lang", next);
@@ -136,10 +151,15 @@ export default function App() {
 
   useEffect(() => { loadAll(); }, []);
 
-  // Auto-refresh every 5 minutes when online
+  // Auto-refresh via ref to avoid stale closure — fix #2
+  useEffect(() => {
+    reloadHistoryRef.current = reloadHistory;
+  });
   useEffect(() => {
     if (!isOnline) return;
-    const interval = setInterval(() => { reloadHistory(); }, 5 * 60 * 1000);
+    const interval = setInterval(() => {
+      reloadHistoryRef.current?.();
+    }, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, [isOnline]);
 
@@ -161,9 +181,11 @@ export default function App() {
         const toDelete = snap.docs.slice(MAX_HISTORY);
         await Promise.all(toDelete.map((d) => deleteDoc(doc(db, "inventoryHistory", d.id))));
       }
-      const q2 = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
-      const snap2 = await getDocs(q2);
-      setHistoryData(snap2.docs.map((d) => ({ ...d.data(), docId: d.id })));
+      // Single query after cleanup — fix #10 (was doing 2 queries)
+      const finalSnap = snap.docs.length > MAX_HISTORY
+        ? await getDocs(query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc")))
+        : snap;
+      setHistoryData(finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id })));
     } catch (err) { console.error(err); }
   }
 
@@ -217,9 +239,10 @@ export default function App() {
   function showToast(message, type = "success") { setToast({ message, type, key: Date.now() }); }
   function handleCountChange(item, value) { setCounts((prev) => ({ ...prev, [countKey(item)]: value })); }
 
-  // Derive today's saved record for "already saved today" banner
-  const todayDate   = new Date().toLocaleDateString("en-GB");
-  const todayRecord = historyData.find(r => r.date === todayDate);
+  // Today's records (all of them) — fix #11 show all saves today
+  const todayDate    = new Date().toLocaleDateString("en-GB");
+  const todayRecords = historyData.filter(r => r.date === todayDate);
+  const todayRecord  = todayRecords[0] ?? null; // most recent first
 
   if (!userName) return <NameSetup onDone={handleNameDone} t={t} lang={lang} onToggleLang={toggleLang} />;
 
@@ -271,11 +294,11 @@ export default function App() {
 
       {/* Page content */}
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + 16px)`, overflowY:"auto" }}>
-        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} />}
+        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} todayCount={todayRecords.length} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} />}
         {page === "History"     && <HistoryPage     t={t} historyData={historyData} />}
-        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} />}
-        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} />}
+        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} isLoading={loading} />}
+        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} isLoading={loading} />}
         {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} />}
       </div>
 

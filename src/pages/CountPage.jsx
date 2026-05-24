@@ -110,7 +110,7 @@ function DaySwitchWarning({ onConfirm, onCancel, t }) {
 }
 
 // ── Main CountPage ────────────────────────────────────────────────────────────
-export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord }) {
+export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord, todayCount = 0 }) {
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const [selectedDay, setSelectedDay] = useState(EN_DAYS[todayIdx]);
   const [saving, setSaving]           = useState(false);
@@ -120,8 +120,22 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
   const isZH = t.appSub === "库存系统";
 
   const lastRecord = historyData[0];
+  // Fix #1: build lastMap using both current name AND _origName to handle renames
   const lastMap = {};
-  (lastRecord?.items ?? []).forEach(i => { lastMap[`${i.category}||${i.name}`] = i.stock; });
+  (lastRecord?.items ?? []).forEach(i => {
+    lastMap[`${i.category}||${i.name}`] = i.stock;
+    if (i._origName) lastMap[`${i.category}||${i._origName}`] = i.stock;
+  });
+  // Also map current items' _origName → stock so renamed items still show last value
+  items.forEach(item => {
+    if (item._origName) {
+      const origKey = `${item.category}||${item._origName}`;
+      const curKey  = `${item.category}||${item.name}`;
+      if (lastMap[origKey] && !lastMap[curKey]) {
+        lastMap[curKey] = lastMap[origKey];
+      }
+    }
+  });
 
   const isWrongDay = selectedDay !== EN_DAYS[todayIdx];
 
@@ -208,20 +222,18 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
         })}
       </div>
 
-      {/* Today already saved banner */}
+      {/* Today already saved banner — fix #11 */}
       {todayRecord && !isWrongDay && filledCount === 0 && (
-        <div style={{
-          display:"flex", alignItems:"center", gap:"10px",
-          background:"var(--green-50)", border:"1px solid var(--green-100)",
-          borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"12px",
-        }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"10px", background:"var(--green-50)", border:"1px solid var(--green-100)", borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"12px" }}>
           <span style={{ fontSize:"15px" }}>✓</span>
           <div style={{ flex:1 }}>
             <div style={{ fontSize:"12px", fontWeight:600, color:"var(--green-700)" }}>
-              {isZH ? `今天已由 ${todayRecord.savedBy} 保存` : `Saved today by ${todayRecord.savedBy}`}
+              {isZH
+                ? `今天已保存 ${todayCount} 次（最新：${todayRecord.savedBy}）`
+                : `Saved ${todayCount}x today — last by ${todayRecord.savedBy}`}
             </div>
             <div style={{ fontSize:"10px", color:"var(--green-600)", marginTop:"1px", opacity:0.8 }}>
-              {todayRecord.time ?? ""} · {isZH ? "可以继续填写再次保存" : "You can fill in and save again"}
+              {todayRecord.time ?? ""} · {isZH ? "可再次填写保存" : "You can fill in and save again"}
             </div>
           </div>
         </div>

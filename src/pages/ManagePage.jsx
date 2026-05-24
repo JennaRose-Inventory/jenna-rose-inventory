@@ -77,12 +77,13 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
     if (idx === -1) return;
     const trimmedName = editItem.newName.trim();
     if (!trimmedName) { onToast(isZH ? "名字不能为空" : "Name cannot be empty", "error"); return; }
-    // Check for duplicate name (only if name changed)
     if (trimmedName !== editItem.name && items.find((i) => i.category === editItem.category && i.name === trimmedName)) {
       onToast(t.alreadyExists, "error"); return;
     }
     const updated = [...items];
-    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type };
+    // Store _origName so lastMap can still find historical stock — fix #1 & #4
+    const origName = updated[idx]._origName ?? editItem.name;
+    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type, _origName: origName };
     setItems(updated);
     setEditItem(p => ({ ...p, name: trimmedName, newName: trimmedName }));
     onToast(isZH ? `"${trimmedName}" 已更新 ✓` : `"${trimmedName}" updated ✓`, "success");

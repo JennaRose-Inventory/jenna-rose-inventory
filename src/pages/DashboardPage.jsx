@@ -3,7 +3,14 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, L
 import { StatCard, Card, SectionLabel, Badge } from "../components/UI.jsx";
 import { lowStockTrend, weeklyActivity, topCategories, buildItemHistoryMap, isLowStock } from "../utils/helpers.js";
 
-export default function DashboardPage({ t, historyData, items }) {
+export default function DashboardPage({ t, historyData, items, isLoading }) {
+  if (isLoading && historyData.length === 0) {
+    return (
+      <div className="page-enter" style={{ display:"flex", flexDirection:"column", gap:"12px", paddingTop:"8px" }}>
+        {[80,160,140].map((h,i) => <div key={i} style={{ height:`${h}px`, borderRadius:"var(--radius-md)", background:"var(--surface2)", animation:"pulse 1.5s ease infinite" }} />)}
+      </div>
+    );
+  }
   const [range, setRange] = useState(14); // 7, 14, 30
   const isZH = t.appSub === "库存系统";
 

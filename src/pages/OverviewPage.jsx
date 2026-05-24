@@ -128,13 +128,16 @@ function OrderModal({ category, items, latestMap, onClose, t, supplier }) {
   );
 }
 
+// STATUS categories — must match CountPage
+const STATUS_CATEGORIES = ["TS Mart", "Thermalnator", "旺明"];
+
 // ── Edit Record Modal ─────────────────────────────────────────────────────────
 function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
   const isZH = t.appSub === "库存系统";
   const [editedItems, setEditedItems] = useState(
     (record.items ?? []).map(i => ({ ...i }))
   );
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]   = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   function updateStock(idx, val) {
@@ -160,7 +163,11 @@ function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
     onClose();
   }
 
-  // Group items by category for display
+  // Fix #3: detect status by category name, not just item.type field
+  function isStatusItem(item) {
+    return STATUS_CATEGORIES.includes(item.category) || item.type === "status";
+  }
+
   const grouped = editedItems.reduce((acc, item, idx) => {
     if (!acc[item.category]) acc[item.category] = [];
     acc[item.category].push({ ...item, _idx: idx });
@@ -199,7 +206,7 @@ function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
                 return (
                   <div key={item._idx} style={{ display:"flex", alignItems:"center", gap:"10px", padding:"9px 18px", borderBottom:"1px solid var(--border)" }}>
                     <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)" }}>{item.name}</div>
-                    {item.type === "status" ? (
+                    {isStatusItem(item) ? (
                       <select value={item.stock ?? ""} onChange={(e) => updateStock(item._idx, e.target.value)}
                         style={{ padding:"5px 8px", borderRadius:"var(--radius-sm)", border:"1.5px solid var(--border)", fontSize:"12px", background:"var(--surface2)" }}>
                         <option value="">—</option>
@@ -240,12 +247,11 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
   const [editModal,  setEditModal]  = useState(null); // record object
   const isZH = t.appSub === "库存系统";
 
-  // ── Group records by date, pick latest record per date ──
+  // Fix #6: historyData is sorted desc, so first occurrence = latest save per date
   const dateMap = {};
   historyData.forEach((rec) => {
     if (!rec.date) return;
-    if (!dateMap[rec.date]) dateMap[rec.date] = rec;
-    // Keep the most recent save for each date (createdAt descending, first wins)
+    if (!dateMap[rec.date]) dateMap[rec.date] = rec; // first = latest
   });
 
   // Get today and yesterday dates
@@ -352,12 +358,17 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
               {i === 0 ? t.latest : t.yesterday}
             </div>
             {rec.savedBy && <div style={{ fontSize:"9px", color:"var(--text-faint)" }}>{rec.savedBy}</div>}
-            {/* Edit button per date */}
+            {/* Edit button — fix #12: larger tap target */}
             <button onClick={() => setEditModal(rec)} style={{
-              marginTop:"3px", fontSize:"9px", color:"var(--text-faint)",
-              background:"var(--surface2)", border:"1px solid var(--border)",
-              borderRadius:"var(--radius-full)", padding:"1px 7px",
-              cursor:"pointer", display:"inline-block",
+              marginTop:"4px",
+              fontSize:"10px", fontWeight:600,
+              color:"var(--brand-mid)",
+              background:"var(--brand-ghost)",
+              border:"1px solid var(--brand-pale)",
+              borderRadius:"var(--radius-full)",
+              padding:"3px 10px",
+              cursor:"pointer",
+              display:"inline-block",
             }}>
               {isZH ? "修改" : "edit"}
             </button>

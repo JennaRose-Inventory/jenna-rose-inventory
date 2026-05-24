@@ -48,7 +48,14 @@ function upcomingHolidayName() {
 const DOW_FULL_EN = { Mon:"Monday",Tue:"Tuesday",Wed:"Wednesday",Thu:"Thursday",Fri:"Friday",Sat:"Saturday",Sun:"Sunday" };
 const DOW_FULL_ZH = { Mon:"星期一",Tue:"星期二",Wed:"星期三",Thu:"星期四",Fri:"星期五",Sat:"星期六",Sun:"星期日" };
 
-export default function PredictionsPage({ t, historyData, items }) {
+export default function PredictionsPage({ t, historyData, items, isLoading }) {
+  if (isLoading && historyData.length === 0) {
+    return (
+      <div className="page-enter" style={{ display:"flex", flexDirection:"column", gap:"12px", paddingTop:"8px" }}>
+        {[80,120,160].map((h,i) => <div key={i} style={{ height:`${h}px`, borderRadius:"var(--radius-md)", background:"var(--surface2)", animation:"pulse 1.5s ease infinite" }} />)}
+      </div>
+    );
+  }
   const isZH = t.appSub === "库存系统";
   const DOW_FULL = isZH ? DOW_FULL_ZH : DOW_FULL_EN;
 
