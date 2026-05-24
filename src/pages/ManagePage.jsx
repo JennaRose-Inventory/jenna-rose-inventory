@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Card, SectionLabel, Select, Input, PrimaryBtn } from "../components/UI.jsx";
+import { validateContact } from "../utils/suppliers.js";
 
 const EN_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
@@ -178,6 +179,8 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 
   function handleSave() {
     const days = form.days ?? [];
+    const v = validateContact(form.type, form.contact);
+    if (!v.ok) { onToast(v.msg, "error"); return; }
     const updated = {
       ...suppliers,
       [selCat]: {
@@ -209,6 +212,8 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     if (!newSupplier.name.trim()) {
       onToast(isZH ? "请输入供应商名称" : "Please enter supplier name", "error"); return;
     }
+    const v = validateContact(newSupplier.type, newSupplier.contact);
+    if (!v.ok) { onToast(v.msg, "error"); return; }
     const name = newSupplier.name.trim();
     const days = newSupplier.days;
     const updated = {
@@ -299,12 +304,17 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           {form.type !== "copy" && (
             <>
               <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
-              <div style={{ marginBottom: "10px" }}>
+              <div style={{ marginBottom: "4px" }}>
                 <Input
                   placeholder={form.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
                   value={form.contact ?? ""}
                   onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
                 />
+              </div>
+              <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
+                {form.type === "phone"
+                  ? (isZH ? "格式：60123456789（马来西亚号码，不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
+                  : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
               </div>
             </>
           )}
@@ -360,12 +370,17 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           {newSupplier.type !== "copy" && (
             <>
               <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
-              <div style={{ marginBottom: "10px" }}>
+              <div style={{ marginBottom: "4px" }}>
                 <Input
                   placeholder={newSupplier.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
                   value={newSupplier.contact}
                   onChange={(e) => setNewSupplier((p) => ({ ...p, contact: e.target.value }))}
                 />
+              </div>
+              <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
+                {newSupplier.type === "phone"
+                  ? (isZH ? "格式：60123456789（马来西亚号码，不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
+                  : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
               </div>
             </>
           )}

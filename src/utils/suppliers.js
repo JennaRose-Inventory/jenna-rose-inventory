@@ -54,12 +54,55 @@ export function buildWhatsAppUrl(supplier, selectedItems) {
   if (!supplier || supplier.type === "copy") return null;
   const message = buildMessage("", selectedItems, supplier.lang);
   const encoded = encodeURIComponent(message);
+
   if (supplier.type === "group") {
-    return { url: supplier.contact, type: "group" };
+    const link = (supplier.contact ?? "").trim();
+    if (!link) return null;
+    return { url: link, type: "group" };
   }
+
   if (supplier.type === "phone") {
-    const phone = supplier.contact.replace(/\D/g, "");
+    // Strip everything except digits
+    let phone = (supplier.contact ?? "").replace(/\D/g, "");
+
+    // Handle Malaysian local format: starts with 0 → replace with 60
+    // e.g. 0123456789 → 60123456789
+    if (phone.startsWith("0")) {
+      phone = "60" + phone.slice(1);
+    }
+
+    // Must start with country code — if still no 60 prefix, assume Malaysia
+    if (!phone.startsWith("60") && phone.length <= 10) {
+      phone = "60" + phone;
+    }
+
+    if (!phone) return null;
     return { url: `https://wa.me/${phone}?text=${encoded}`, type: "phone" };
   }
+
   return null;
+}
+
+// ── Validate contact before saving ───────────────────────────────────────────
+export function validateContact(type, contact) {
+  if (type === "copy") return { ok: true };
+  if (!contact?.trim()) return { ok: false, msg: "Contact cannot be empty" };
+
+  if (type === "group") {
+    const link = contact.trim();
+    if (!link.includes("chat.whatsapp.com") && !link.includes("wa.me")) {
+      return { ok: false, msg: "Must be a WhatsApp group link (chat.whatsapp.com/...)" };
+    }
+    return { ok: true };
+  }
+
+  if (type === "phone") {
+    const digits = contact.replace(/\D/g, "");
+    if (digits.length < 9 || digits.length > 15) {
+      return { ok: false, msg: "Phone number looks invalid (e.g. 60123456789)" };
+    }
+    return { ok: true };
+  }
+
+  return { ok: true };
 }
