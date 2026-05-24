@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   collection, addDoc, getDocs, deleteDoc,
-  query, orderBy, limit, doc,
+  query, orderBy, doc,
 } from "firebase/firestore";
 
 import { db } from "./firebase.js";
@@ -65,7 +65,11 @@ export default function App() {
   const [toast, setToast]             = useState(null);
 
   const t = STRINGS[lang];
-  const allCategories = [...new Set(itemsData.map((i) => i.category))];
+  // Merge categories from items.js AND supplier names so new suppliers show up in Items tab
+  const allCategories = [...new Set([
+    ...itemsData.map((i) => i.category),
+    ...Object.keys(suppliers),
+  ])];
 
   const NAV = [
     { id: "Count",       iconName: "count",    label: t.navCount    },
@@ -93,9 +97,9 @@ export default function App() {
 
   async function loadAll() {
     try {
-      const q1 = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"), limit(1));
-      const snap1 = await getDocs(q1);
-      setItems(snap1.empty ? itemsData : snap1.docs[0].data().items);
+      // Always use itemsData as the master item list (category, name, days, type)
+      // Firebase history is for stock values only — never override item structure from it
+      setItems(itemsData);
     } catch { setItems(itemsData); }
     try {
       const q2 = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));

@@ -165,12 +165,12 @@ function DaySwitchWarning({ pendingDay, onConfirm, onCancel, t }) {
 
 // ── Main CountPage ────────────────────────────────────────────────────────────
 export default function CountPage({ t, items, counts, onCountChange, onSave, historyData = [] }) {
-  const DAYS = t.days;
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
-  const [selectedDay, setSelectedDay] = useState(DAYS[todayIdx]);
+  // Always store selectedDay in English internally — never use t.days for state
+  const [selectedDay, setSelectedDay] = useState(EN_DAYS[todayIdx]);
   const [saving, setSaving]           = useState(false);
-  const [summary, setSummary]         = useState(null);    // post-save summary
-  const [pendingDay, setPendingDay]   = useState(null);    // day switch warning
+  const [summary, setSummary]         = useState(null);
+  const [pendingDay, setPendingDay]   = useState(null);
   const inputRefs = useRef({});
 
   // Last saved record for reference values
@@ -178,9 +178,9 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
   const lastMap = {};
   (lastRecord?.items ?? []).forEach(i => { lastMap[`${i.category}||${i.name}`] = i.stock; });
 
-  const selectedDayEN = EN_DAYS[DAYS.indexOf(selectedDay)] ?? selectedDay;
+  // selectedDay is always EN — match directly against items.days
   const activeItems = items.filter(
-    (item) => item.active !== false && (item.days ?? EN_DAYS).includes(selectedDayEN)
+    (item) => item.active !== false && (item.days ?? EN_DAYS).includes(selectedDay)
   );
 
   const grouped = activeItems.reduce((acc, item) => {
@@ -215,23 +215,20 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
   function handleDayClick(day) {
     if (day === selectedDay) return;
     if (filledCount > 0) {
-      setPendingDay(day); // show warning
+      setPendingDay(day);
     } else {
       setSelectedDay(day);
     }
   }
 
   function confirmDaySwitch() {
-    // Clear counts by resetting via parent — just switch day, counts already reset on save
     setSelectedDay(pendingDay);
     setPendingDay(null);
-    // Clear all current counts
     activeItems.forEach(item => onCountChange(item, ""));
   }
 
   async function handleSave() {
     setSaving(true);
-    // Build summary before saving
     const filledItems = activeItems
       .filter(i => counts[countKey(i)] !== undefined && counts[countKey(i)] !== "")
       .map(i => ({ name: i.name, category: i.category, stock: counts[countKey(i)] }));
@@ -243,32 +240,20 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
   return (
     <div className="page-enter" style={{ paddingBottom: "90px" }}>
 
-      {/* Day switch warning */}
       {pendingDay && (
-        <DaySwitchWarning
-          pendingDay={pendingDay}
-          onConfirm={confirmDaySwitch}
-          onCancel={() => setPendingDay(null)}
-          t={t}
-        />
+        <DaySwitchWarning pendingDay={pendingDay} onConfirm={confirmDaySwitch} onCancel={() => setPendingDay(null)} t={t} />
       )}
-
-      {/* Save summary modal */}
       {summary && (
-        <SaveSummaryModal
-          summary={summary}
-          onClose={() => setSummary(null)}
-          t={t}
-        />
+        <SaveSummaryModal summary={summary} onClose={() => setSummary(null)} t={t} />
       )}
 
-      {/* Day selector */}
+      {/* Day selector — EN_DAYS internally, t.daysShort for display */}
       <div style={{ display: "flex", gap: "6px", overflowX: "auto", paddingBottom: "2px", marginBottom: "16px", scrollbarWidth: "none" }}>
-        {DAYS.map((day, idx) => {
-          const isSelected = selectedDay === day;
+        {EN_DAYS.map((dayEN, idx) => {
+          const isSelected = selectedDay === dayEN;
           const isToday    = idx === todayIdx;
           return (
-            <button key={day} onClick={() => handleDayClick(day)} style={{
+            <button key={dayEN} onClick={() => handleDayClick(dayEN)} style={{
               padding: "7px 13px", borderRadius: "var(--radius-full)",
               background: isSelected ? "var(--brand)" : isToday ? "var(--brand-ghost)" : "var(--surface)",
               color: isSelected ? "#fff" : isToday ? "var(--brand)" : "var(--text-secondary)",
@@ -359,7 +344,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, his
 
       {activeItems.length === 0 && (
         <div style={{ textAlign: "center", padding: "40px 20px", color: "var(--text-muted)", fontSize: "13px" }}>
-          {t.noItemsDay(selectedDay)}
+          {t.noItemsDay(t.days[EN_DAYS.indexOf(selectedDay)])}
         </div>
       )}
 
