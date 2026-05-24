@@ -121,23 +121,39 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
 }
 
 // ── Supplier section ──────────────────────────────────────────────────────────
-function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToast }) {
+function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToast, items, setItems }) {
   const isZH = t.appSub === "库存系统";
   const supplierNames = Object.keys(suppliers);
 
-  // sub-tab: "edit" or "add"
-  const [subTab, setSubTab]   = useState("edit");
-  const [selCat, setSelCat]   = useState(supplierNames[0] ?? allCategories[0] ?? "");
-  const current = suppliers[selCat] ?? { type: "copy", contact: "", lang: "zh", days: [] };
-  const [form, setForm]       = useState(current);
+  const [subTab, setSubTab] = useState("edit");
+  const [selCat, setSelCat] = useState(supplierNames[0] ?? allCategories[0] ?? "");
 
-  // New supplier form
+  function buildForm(cat) {
+    const s = suppliers[cat] ?? {};
+    // If supplier has no days set, derive from existing items in that category
+    const itemDays = items
+      .filter(i => i.category === cat && i.active !== false)
+      .flatMap(i => i.days ?? []);
+    const existingDays = [...new Set(itemDays)];
+    return {
+      type:    s.type    ?? "copy",
+      contact: s.contact ?? "",
+      lang:    s.lang    ?? "zh",
+      days:    s.days?.length > 0 ? s.days : existingDays,
+    };
+  }
+
+  const [form, setForm] = useState(() => buildForm(supplierNames[0] ?? ""));
+
+  // Keep form in sync when suppliers prop changes (e.g. after save)
+  const [lastSelCat, setLastSelCat] = useState(selCat);
+  if (selCat !== lastSelCat) {
+    setLastSelCat(selCat);
+    setForm(buildForm(selCat));
+  }
+
   const [newSupplier, setNewSupplier] = useState({
-    name: "",
-    type: "group",
-    contact: "",
-    lang: "zh",
-    days: [],
+    name: "", type: "group", contact: "", lang: "zh", days: [],
   });
 
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
@@ -150,12 +166,30 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 
   function handleCatChange(cat) {
     setSelCat(cat);
-    setForm(suppliers[cat] ?? { type: "copy", contact: "", lang: "zh", days: [] });
+    setForm(buildForm(cat));
+  }
+
+  // Sync item days for a category
+  function syncItemDays(category, days) {
+    setItems(prev => prev.map(item =>
+      item.category === category ? { ...item, days } : item
+    ));
   }
 
   function handleSave() {
-    const updated = { ...suppliers, [selCat]: { ...form, contact: form.contact.trim() } };
+    const days = form.days ?? [];
+    const updated = {
+      ...suppliers,
+      [selCat]: {
+        type:    form.type,
+        contact: (form.contact ?? "").trim(),
+        lang:    form.lang ?? "zh",
+        days,
+      },
+    };
     onUpdateSuppliers(updated);
+    // Sync Count days for all items in this category
+    syncItemDays(selCat, days);
     onToast(isZH ? `"${selCat}" 已更新 ✓` : `"${selCat}" updated ✓`, "success");
   }
 
@@ -165,8 +199,9 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     delete updated[selCat];
     onUpdateSuppliers(updated);
     const remaining = Object.keys(updated);
-    setSelCat(remaining[0] ?? "");
-    if (remaining[0]) setForm(updated[remaining[0]] ?? { type: "copy", contact: "", lang: "zh", days: [] });
+    const next = remaining[0] ?? "";
+    setSelCat(next);
+    if (next) setForm(buildForm(next));
     onToast(isZH ? `"${selCat}" 已删除` : `"${selCat}" deleted`, "info");
   }
 
@@ -175,43 +210,52 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
       onToast(isZH ? "请输入供应商名称" : "Please enter supplier name", "error"); return;
     }
     const name = newSupplier.name.trim();
-    const updated = { ...suppliers, [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days: newSupplier.days } };
+    const days = newSupplier.days;
+    const updated = {
+      ...suppliers,
+      [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days },
+    };
     onUpdateSuppliers(updated);
+    // Sync Count days for items in this new category
+    if (days.length > 0) syncItemDays(name, days);
     setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [] });
     setSelCat(name);
-    setForm(updated[name]);
+    setForm({ type: updated[name].type, contact: updated[name].contact, lang: updated[name].lang, days });
     setSubTab("edit");
     onToast(isZH ? `"${name}" 已添加 ✓` : `"${name}" added ✓`, "success");
   }
 
-  function toggleDay(day, target, setTarget) {
-    const days = target.days ?? [];
-    const next = days.includes(day) ? days.filter(d => d !== day) : [...days, day];
-    setTarget(p => ({ ...p, days: next }));
+  function toggleDay(day, setTarget) {
+    setTarget(prev => {
+      const days = prev.days ?? [];
+      const next = days.includes(day) ? days.filter(d => d !== day) : [...days, day];
+      return { ...prev, days: next };
+    });
   }
 
+  const EN_SHORT = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+
   function DayPicker({ value, onChange }) {
-    const short = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
     return (
       <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "14px" }}>
         {EN_DAYS.map((day, i) => {
           const active = (value ?? []).includes(day);
           return (
             <button key={day} onClick={() => onChange(day)} style={{
-              padding: "5px 10px", borderRadius: "var(--radius-full)",
+              padding: "6px 11px", borderRadius: "var(--radius-full)",
               background: active ? "var(--brand)" : "var(--surface2)",
               color: active ? "#fff" : "var(--text-muted)",
               fontSize: "11px", fontWeight: active ? 700 : 400,
               border: `1.5px solid ${active ? "var(--brand)" : "var(--border)"}`,
               cursor: "pointer", transition: "all 0.12s",
-            }}>{short[i]}</button>
+              boxShadow: active ? "0 2px 8px rgba(61,35,20,0.2)" : "none",
+            }}>{EN_SHORT[i]}</button>
           );
         })}
       </div>
     );
   }
 
-  // Sub-tabs
   const subTabs = [
     { id: "edit", label: isZH ? "编辑供应商" : "Edit" },
     { id: "add",  label: isZH ? "添加供应商" : "Add New" },
@@ -276,7 +320,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           <div style={L}>{isZH ? "下单日（显示在 Overview）" : "Order Days (shown in Overview)"}</div>
           <DayPicker
             value={form.days ?? []}
-            onChange={(day) => toggleDay(day, form, setForm)}
+            onChange={(day) => toggleDay(day, setForm)}
           />
 
           <div style={{ display: "flex", gap: "8px" }}>
@@ -337,7 +381,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
           <DayPicker
             value={newSupplier.days}
-            onChange={(day) => toggleDay(day, newSupplier, setNewSupplier)}
+            onChange={(day) => toggleDay(day, setNewSupplier)}
           />
 
           <PrimaryBtn onClick={handleAddSupplier}>
@@ -407,7 +451,7 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast,
       {activeTab === "supplier" && (
         <>
           <SectionLabel>📱 {isZH ? "供应商设置" : "Supplier Settings"}</SectionLabel>
-          <SupplierSection t={t} allCategories={allCategories} suppliers={suppliers} onUpdateSuppliers={onUpdateSuppliers} onToast={onToast} />
+          <SupplierSection t={t} allCategories={allCategories} suppliers={suppliers} onUpdateSuppliers={onUpdateSuppliers} onToast={onToast} items={items} setItems={setItems} />
         </>
       )}
       {activeTab === "account" && (
