@@ -1,0 +1,19 @@
+{
+  "name": "Jenna Rose Inventory",
+  "short_name": "Jenna Rose",
+  "description": "Cafe inventory management system",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f5f2",
+  "theme_color": "#3d2314",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
