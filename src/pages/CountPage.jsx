@@ -222,20 +222,47 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
         })}
       </div>
 
-      {/* Today already saved banner — fix #11 */}
+      {/* Today already saved banner — shows merge info */}
       {todayRecord && !isWrongDay && filledCount === 0 && (
-        <div style={{ display:"flex", alignItems:"center", gap:"10px", background:"var(--green-50)", border:"1px solid var(--green-100)", borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"12px" }}>
-          <span style={{ fontSize:"15px" }}>✓</span>
-          <div style={{ flex:1 }}>
-            <div style={{ fontSize:"12px", fontWeight:600, color:"var(--green-700)" }}>
-              {isZH
-                ? `今天已保存 ${todayCount} 次（最新：${todayRecord.savedBy}）`
-                : `Saved ${todayCount}x today — last by ${todayRecord.savedBy}`}
-            </div>
-            <div style={{ fontSize:"10px", color:"var(--green-600)", marginTop:"1px", opacity:0.8 }}>
-              {todayRecord.time ?? ""} · {isZH ? "可再次填写保存" : "You can fill in and save again"}
+        <div style={{ background:"var(--green-50)", border:"1px solid var(--green-100)", borderRadius:"var(--radius-md)", padding:"10px 14px", marginBottom:"12px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
+            <span style={{ fontSize:"15px" }}>✓</span>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:"12px", fontWeight:600, color:"var(--green-700)" }}>
+                {isZH
+                  ? `今天已保存（${todayRecord.savedBy} · ${todayRecord.time ?? ""}）`
+                  : `Saved today by ${todayRecord.savedBy} · ${todayRecord.time ?? ""}`}
+              </div>
+              <div style={{ fontSize:"10px", color:"var(--green-600)", marginTop:"1px", opacity:0.8 }}>
+                {isZH
+                  ? "继续填写会自动合并，不会覆盖已有数据"
+                  : "Saving again will merge — won't overwrite existing data"}
+              </div>
             </div>
           </div>
+          {/* Show which items already have values vs missing */}
+          {(() => {
+            const existingMap = {};
+            (todayRecord.items ?? []).forEach(i => {
+              existingMap[`${i.category}||${i.name}`] = i.stock;
+            });
+            const filledAlready = activeItems.filter(i => {
+              const v = existingMap[`${i.category}||${i.name}`];
+              return v !== "" && v !== null && v !== undefined;
+            }).length;
+            const missing = activeItems.length - filledAlready;
+            if (missing === 0) return null;
+            return (
+              <div style={{ marginTop:"8px", display:"flex", gap:"8px" }}>
+                <span style={{ fontSize:"10px", background:"var(--green-100)", color:"var(--green-700)", borderRadius:"var(--radius-full)", padding:"2px 10px", fontWeight:600 }}>
+                  ✓ {filledAlready} {isZH ? "已填" : "filled"}
+                </span>
+                <span style={{ fontSize:"10px", background:"var(--amber-50)", color:"var(--amber-600)", border:"1px solid var(--amber-100)", borderRadius:"var(--radius-full)", padding:"2px 10px", fontWeight:600 }}>
+                  · {missing} {isZH ? "未填" : "not yet filled"}
+                </span>
+              </div>
+            );
+          })()}
         </div>
       )}
 

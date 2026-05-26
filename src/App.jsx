@@ -118,8 +118,9 @@ export default function App() {
   const isOnline = useOnline();
   const t = STRINGS[lang];
 
-  // Use ref for reloadHistory to avoid stale closure in setInterval — fix #2
+  // Refs to avoid stale closures
   const reloadHistoryRef = useRef(null);
+  const todayDocIdRef    = useRef(null); // stores today's Firebase doc ID for merge
 
   const allCategories = [...new Set([
     ...itemsData.map((i) => i.category),
@@ -135,7 +136,12 @@ export default function App() {
     { id:"Manage",      iconName:"manage",   label:t.navManage   },
   ];
 
-  function setItems(updated) {
+  function setHistoryAndRef(docs) {
+    const todayStr = new Date().toLocaleDateString("en-GB");
+    const todayDoc = docs.find(d => d.date === todayStr);
+    todayDocIdRef.current = todayDoc?.docId ?? null;
+    setHistoryData(docs);
+  }
     const val = typeof updated === "function" ? updated(items) : updated;
     persistItems(val);
     setItemsState(val);
@@ -167,7 +173,7 @@ export default function App() {
     try {
       const q = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
-      setHistoryData(snap.docs.map((d) => ({ ...d.data(), docId: d.id })));
+      setHistoryAndRef(snap.docs.map((d) => ({ ...d.data(), docId: d.id })));
     } catch { setHistoryData([]); }
     setCounts({});
     setLoading(false);
@@ -185,7 +191,7 @@ export default function App() {
       const finalSnap = snap.docs.length > MAX_HISTORY
         ? await getDocs(query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc")))
         : snap;
-      setHistoryData(finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id })));
+      setHistoryAndRef(finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id })));
     } catch (err) { console.error(err); }
   }
 
@@ -217,21 +223,54 @@ export default function App() {
       return;
     }
     try {
-      const itemsToSave = items.map((item) => ({ ...item, stock: counts[countKey(item)] ?? "" }));
-      const now = new Date();
-      await addDoc(collection(db, "inventoryHistory"), {
-        date:        now.toLocaleDateString("en-GB"),
-        time:        now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" }),
-        createdAt:   now,
-        savedBy:     userName || "—",
-        selectedDay,
-        items:       itemsToSave,
-      });
+      const now      = new Date();
+      const todayStr = now.toLocaleDateString("en-GB");
+      const isZH     = t.appSub === "库存系统";
+      const timeStr  = now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
+      const existingDocId = todayDocIdRef.current;
+
+      // Debug — remove after fix confirmed
+      console.log("[SAVE] todayStr:", todayStr);
+      console.log("[SAVE] todayDocIdRef.current:", existingDocId);
+      console.log("[SAVE] historyData dates:", historyData.map(r => r.date + " | " + r.docId));
+
+      if (existingDocId) {
+        console.log("[SAVE] → MERGE into", existingDocId);
+        const existingSnap = await getDocs(
+          query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"))
+        );
+        const existingDoc = existingSnap.docs.find(d => d.id === existingDocId);
+        const existingMap = {};
+        if (existingDoc) {
+          (existingDoc.data().items ?? []).forEach(i => {
+            existingMap[`${i.category}||${i.name}`] = i.stock;
+          });
+        }
+        const mergedItems = items.map((item) => {
+          const key      = `${item.category}||${item.name}`;
+          const newStock = counts[countKey(item)];
+          const hasNew   = newStock !== undefined && newStock !== "";
+          return { ...item, stock: hasNew ? newStock : (existingMap[key] ?? "") };
+        });
+        await updateDoc(doc(db, "inventoryHistory", existingDocId), {
+          items: mergedItems, time: timeStr, savedBy: userName || "—", selectedDay,
+        });
+        showToast(isZH ? "已合并更新 ✓" : "Merged ✓", "success");
+      } else {
+        console.log("[SAVE] → NEW document");
+        const itemsToSave = items.map(item => ({ ...item, stock: counts[countKey(item)] ?? "" }));
+        const newDocRef = await addDoc(collection(db, "inventoryHistory"), {
+          date: todayStr, time: timeStr, createdAt: now,
+          savedBy: userName || "—", selectedDay, items: itemsToSave,
+        });
+        console.log("[SAVE] new docId:", newDocRef.id);
+        todayDocIdRef.current = newDocRef.id;
+        showToast(t.savedOk, "success");
+      }
       setCounts({});
       await reloadHistory();
-      showToast(t.savedOk, "success");
     } catch (err) {
-      console.error(err);
+      console.error("[SAVE ERROR]", err);
       showToast(t.saveFailed, "error");
     }
   }
