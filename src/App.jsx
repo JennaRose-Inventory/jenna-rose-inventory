@@ -142,6 +142,8 @@ export default function App() {
     todayDocIdRef.current = todayDoc?.docId ?? null;
     setHistoryData(docs);
   }
+
+  function setItems(updated) {
     const val = typeof updated === "function" ? updated(items) : updated;
     persistItems(val);
     setItemsState(val);
