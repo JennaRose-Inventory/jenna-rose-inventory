@@ -335,11 +335,11 @@ export default function App() {
 
       {/* Page content */}
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + 16px)`, overflowY:"auto" }}>
-        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} todayCount={todayRecords.length} />}
+        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={suppliers} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} />}
-        {page === "History"     && <HistoryPage     t={t} historyData={historyData} />}
-        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} isLoading={loading} />}
-        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} isLoading={loading} />}
+        {page === "History"     && <HistoryPage     t={t} historyData={historyData} suppliers={suppliers} />}
+        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
+        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
         {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} />}
       </div>
 

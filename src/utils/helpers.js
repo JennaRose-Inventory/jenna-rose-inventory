@@ -1,23 +1,39 @@
 // ── Key helpers ──────────────────────────────────────────────────────────────
 export const countKey = (item) => `${item.category}||${item.name}`;
 
+// ── Get effective low stock threshold for an item ─────────────────────────────
+// Priority: item.lowStock → suppliers[category].lowStock → default 3
+export function getThreshold(item, suppliers = {}) {
+  if (item?.lowStock !== undefined && item.lowStock !== "" && !isNaN(Number(item.lowStock))) {
+    return Number(item.lowStock);
+  }
+  const sup = suppliers[item?.category];
+  if (sup?.lowStock !== undefined && sup.lowStock !== "" && !isNaN(Number(sup.lowStock))) {
+    return Number(sup.lowStock);
+  }
+  return 3; // default
+}
+
 // ── Stock classification ──────────────────────────────────────────────────────
-export function isLowStock(item) {
+export function isLowStock(item, suppliers = {}) {
   const s = item.stock;
   if (s === "" || s === null || s === undefined) return false;
   if (s === "Need Order" || s === "not enough") return true;
   const n = Number(s);
-  return !isNaN(n) && n <= 3;
+  if (isNaN(n)) return false;
+  const threshold = getThreshold(item, suppliers);
+  return n <= threshold;
 }
 
-export function stockColor(val) {
+export function stockColor(val, item, suppliers = {}) {
   if (val === undefined || val === null || val === "") return "var(--text-muted)";
   if (val === "Need Order") return "var(--red-600)";
   if (val === "Enough")     return "var(--green-600)";
   const n = Number(val);
   if (!isNaN(n)) {
-    if (n <= 3)  return "var(--red-600)";
-    if (n <= 6)  return "var(--amber-500)";
+    const threshold = item ? getThreshold(item, suppliers) : 3;
+    if (n <= threshold)     return "var(--red-600)";
+    if (n <= threshold * 2) return "var(--amber-500)";
     return "var(--green-600)";
   }
   return "var(--text-secondary)";

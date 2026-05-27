@@ -59,10 +59,11 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
     name:     firstActive?.name     ?? "",
     newName:  firstActive?.name     ?? "",
     type:     firstActive?.type     ?? "quantity",
+    lowStock: firstActive?.lowStock ?? "",
   });
 
   // Add item state
-  const [newItem, setNewItem] = useState({ category: allCategories[0] ?? "", name: "", type: "quantity" });
+  const [newItem, setNewItem] = useState({ category: allCategories[0] ?? "", name: "", type: "quantity", lowStock: "" });
 
   // Archive state
   const [archiveSelect, setArchive] = useState({
@@ -81,9 +82,8 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
       onToast(t.alreadyExists, "error"); return;
     }
     const updated = [...items];
-    // Store _origName so lastMap can still find historical stock — fix #1 & #4
     const origName = updated[idx]._origName ?? editItem.name;
-    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type, _origName: origName };
+    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type, _origName: origName, lowStock: editItem.lowStock };
     setItems(updated);
     setEditItem(p => ({ ...p, name: trimmedName, newName: trimmedName }));
     onToast(isZH ? `"${trimmedName}" 已更新 ✓` : `"${trimmedName}" updated ✓`, "success");
@@ -95,7 +95,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
       onToast(t.alreadyExists, "error"); return;
     }
     setItems([...items, { ...newItem, name: newItem.name.trim(), stock: "", active: true, days: EN_DAYS }]);
-    setNewItem((p) => ({ ...p, name: "" }));
+    setNewItem((p) => ({ ...p, name: "", lowStock: "" }));
     onToast(t.addedOk(newItem.name), "success");
   }
 
@@ -138,7 +138,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
           <Select value={editItem.category} onChange={(e) => {
             const cat = e.target.value;
             const first = itemsInCat(cat)[0];
-            setEditItem({ category: cat, name: first?.name ?? "", newName: first?.name ?? "", type: first?.type ?? "quantity" });
+            setEditItem({ category: cat, name: first?.name ?? "", newName: first?.name ?? "", type: first?.type ?? "quantity", lowStock: first?.lowStock ?? "" });
           }}>
             {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
@@ -149,7 +149,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
           <Select value={editItem.name} onChange={(e) => {
             const name = e.target.value;
             const found = items.find((i) => i.category === editItem.category && i.name === name);
-            setEditItem(p => ({ ...p, name, newName: name, type: found?.type ?? "quantity" }));
+            setEditItem(p => ({ ...p, name, newName: name, type: found?.type ?? "quantity", lowStock: found?.lowStock ?? "" }));
           }}>
             {itemsInCat(editItem.category).map((i) => <option key={i.name} value={i.name}>{i.name}</option>)}
           </Select>
@@ -165,12 +165,29 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
         </div>
 
         <div style={L}>{t.inputType}</div>
-        <div style={{ marginBottom: "14px" }}>
+        <div style={{ marginBottom: "10px" }}>
           <Select value={editItem.type} onChange={(e) => setEditItem(p => ({ ...p, type: e.target.value }))}>
             <option value="quantity">{t.numberCount}</option>
             <option value="status">{t.enoughNeedOrder}</option>
           </Select>
         </div>
+        {editItem.type === "quantity" && (
+          <>
+            <div style={L}>{isZH ? "低库存阈值（留空 = 跟 supplier 设定）" : "Low Stock Threshold (leave blank = use supplier default)"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                type="number" inputMode="numeric"
+                placeholder={isZH ? "例：5（留空 = 用 supplier 设定）" : "e.g. 5 (blank = supplier default)"}
+                value={editItem.lowStock ?? ""}
+                onChange={(e) => setEditItem(p => ({ ...p, lowStock: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+              {isZH ? "当数量 ≤ 此值时显示红色警告" : "Shows red warning when stock ≤ this value"}
+            </div>
+          </>
+        )}
+        {editItem.type !== "quantity" && <div style={{ marginBottom: "14px" }} />}
         <PrimaryBtn onClick={saveEditItem}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
       </Accordion>
 
@@ -193,12 +210,29 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
           <Input placeholder={t.typeNewItemName} value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
         </div>
         <div style={L}>{t.inputType}</div>
-        <div style={{ marginBottom: "14px" }}>
+        <div style={{ marginBottom: "10px" }}>
           <Select value={newItem.type} onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}>
             <option value="quantity">{t.numberCount}</option>
             <option value="status">{t.enoughNeedOrder}</option>
           </Select>
         </div>
+        {newItem.type === "quantity" && (
+          <>
+            <div style={L}>{isZH ? "低库存阈值（留空 = 跟 supplier 设定）" : "Low Stock Threshold (leave blank = supplier default)"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                type="number" inputMode="numeric"
+                placeholder={isZH ? "例：5" : "e.g. 5"}
+                value={newItem.lowStock ?? ""}
+                onChange={(e) => setNewItem(p => ({ ...p, lowStock: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+              {isZH ? "当数量 ≤ 此值时显示红色警告" : "Shows red warning when stock ≤ this value"}
+            </div>
+          </>
+        )}
+        {newItem.type !== "quantity" && <div style={{ marginBottom: "14px" }} />}
         <PrimaryBtn onClick={addItem}>{t.addItem}</PrimaryBtn>
       </Accordion>
 
@@ -250,16 +284,14 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 
   function buildForm(cat) {
     const s = suppliers[cat] ?? {};
-    // If supplier has no days set, derive from existing items in that category
-    const itemDays = items
-      .filter(i => i.category === cat && i.active !== false)
-      .flatMap(i => i.days ?? []);
+    const itemDays = items.filter(i => i.category === cat && i.active !== false).flatMap(i => i.days ?? []);
     const existingDays = [...new Set(itemDays)];
     return {
-      type:    s.type    ?? "copy",
-      contact: s.contact ?? "",
-      lang:    s.lang    ?? "zh",
-      days:    s.days?.length > 0 ? s.days : existingDays,
+      type:     s.type     ?? "copy",
+      contact:  s.contact  ?? "",
+      lang:     s.lang     ?? "zh",
+      days:     s.days?.length > 0 ? s.days : existingDays,
+      lowStock: s.lowStock ?? "",
     };
   }
 
@@ -273,7 +305,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   }
 
   const [newSupplier, setNewSupplier] = useState({
-    name: "", type: "group", contact: "", lang: "zh", days: [],
+    name: "", type: "group", contact: "", lang: "zh", days: [], lowStock: "",
   });
 
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
@@ -307,6 +339,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         contact: (form.contact ?? "").trim(),
         lang:    form.lang ?? "zh",
         days,
+        lowStock: form.lowStock ?? "",
       },
     };
     onUpdateSuppliers(updated);
@@ -337,12 +370,12 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     const days = newSupplier.days;
     const updated = {
       ...suppliers,
-      [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days },
+      [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days, lowStock: newSupplier.lowStock ?? "" },
     };
     onUpdateSuppliers(updated);
     // Sync Count days for items in this new category
     if (days.length > 0) syncItemDays(name, days);
-    setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [] });
+    setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [], lowStock: "" });
     setSelCat(name);
     setForm({ type: updated[name].type, contact: updated[name].contact, lang: updated[name].lang, days });
     setOpenSection("edit");
@@ -444,6 +477,19 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
         <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
 
+        <div style={L}>{isZH ? "默认低库存阈值（给旗下所有 item 用）" : "Default Low Stock Threshold (for all items)"}</div>
+        <div style={{ marginBottom: "4px" }}>
+          <Input
+            type="number" inputMode="numeric"
+            placeholder={isZH ? "例：5（留空 = 系统默认 ≤3）" : "e.g. 5 (blank = system default ≤3)"}
+            value={form.lowStock ?? ""}
+            onChange={(e) => setForm(p => ({ ...p, lowStock: e.target.value }))}
+          />
+        </div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+          {isZH ? "item 没设个别阈值时，会用这个数值" : "Used when individual item has no threshold set"}
+        </div>
+
         <div style={{ display: "flex", gap: "8px" }}>
           <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
           <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
@@ -506,6 +552,19 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 
         <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
         <DayPicker value={newSupplier.days} onChange={(day) => toggleDay(day, setNewSupplier)} />
+
+        <div style={L}>{isZH ? "默认低库存阈值" : "Default Low Stock Threshold"}</div>
+        <div style={{ marginBottom: "4px" }}>
+          <Input
+            type="number" inputMode="numeric"
+            placeholder={isZH ? "例：5（留空 = 系统默认 ≤3）" : "e.g. 5 (blank = system default ≤3)"}
+            value={newSupplier.lowStock ?? ""}
+            onChange={(e) => setNewSupplier(p => ({ ...p, lowStock: e.target.value }))}
+          />
+        </div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+          {isZH ? "item 没设个别阈值时，会用这个数值" : "Used when individual item has no threshold set"}
+        </div>
 
         <PrimaryBtn onClick={handleAddSupplier}>{isZH ? "添加供应商" : "Add Supplier"}</PrimaryBtn>
       </Accordion>
