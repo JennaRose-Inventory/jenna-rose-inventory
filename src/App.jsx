@@ -10,6 +10,7 @@ import { countKey } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
 import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
 import { Icon } from "./components/UI.jsx";
+import { checkOrderDayAlerts } from "./utils/notifications.js";
 import Toast from "./components/Toast.jsx";
 
 import CountPage       from "./pages/CountPage.jsx";
@@ -172,13 +173,24 @@ export default function App() {
   }, [isOnline]);
 
   async function loadAll() {
+    let loadedHistory = [];
     try {
       const q = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
-      setHistoryAndRef(snap.docs.map((d) => ({ ...d.data(), docId: d.id })));
+      loadedHistory = snap.docs.map((d) => ({ ...d.data(), docId: d.id }));
+      setHistoryAndRef(loadedHistory);
     } catch { setHistoryData([]); }
     setCounts({});
     setLoading(false);
+    // Check order day low stock alerts after load
+    setTimeout(() => {
+      checkOrderDayAlerts({
+        items:       loadItems(),
+        suppliers:   loadSuppliers(),
+        historyData: loadedHistory,
+        lang:        localStorage.getItem("jr_lang") || "en",
+      });
+    }, 1500);
   }
 
   async function reloadHistory() {

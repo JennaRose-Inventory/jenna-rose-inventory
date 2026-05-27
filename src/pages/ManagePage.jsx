@@ -287,11 +287,12 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     const itemDays = items.filter(i => i.category === cat && i.active !== false).flatMap(i => i.days ?? []);
     const existingDays = [...new Set(itemDays)];
     return {
-      type:     s.type     ?? "copy",
-      contact:  s.contact  ?? "",
-      lang:     s.lang     ?? "zh",
-      days:     s.days?.length > 0 ? s.days : existingDays,
-      lowStock: s.lowStock ?? "",
+      type:      s.type      ?? "copy",
+      contact:   s.contact   ?? "",
+      lang:      s.lang      ?? "zh",
+      days:      s.days?.length > 0 ? s.days : existingDays,
+      orderDays: s.orderDays ?? s.days ?? [],  // when to send order notification
+      lowStock:  s.lowStock  ?? "",
     };
   }
 
@@ -305,7 +306,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   }
 
   const [newSupplier, setNewSupplier] = useState({
-    name: "", type: "group", contact: "", lang: "zh", days: [], lowStock: "",
+    name: "", type: "group", contact: "", lang: "zh", days: [], orderDays: [], lowStock: "",
   });
 
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
@@ -335,11 +336,12 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     const updated = {
       ...suppliers,
       [selCat]: {
-        type:    form.type,
-        contact: (form.contact ?? "").trim(),
-        lang:    form.lang ?? "zh",
+        type:      form.type,
+        contact:   (form.contact ?? "").trim(),
+        lang:      form.lang ?? "zh",
         days,
-        lowStock: form.lowStock ?? "",
+        orderDays: form.orderDays ?? days,
+        lowStock:  form.lowStock ?? "",
       },
     };
     onUpdateSuppliers(updated);
@@ -370,12 +372,11 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     const days = newSupplier.days;
     const updated = {
       ...suppliers,
-      [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days, lowStock: newSupplier.lowStock ?? "" },
+      [name]: { type: newSupplier.type, contact: newSupplier.contact.trim(), lang: newSupplier.lang, days, orderDays: newSupplier.orderDays ?? days, lowStock: newSupplier.lowStock ?? "" },
     };
     onUpdateSuppliers(updated);
-    // Sync Count days for items in this new category
     if (days.length > 0) syncItemDays(name, days);
-    setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [], lowStock: "" });
+    setNewSupplier({ name: "", type: "group", contact: "", lang: "zh", days: [], orderDays: [], lowStock: "" });
     setSelCat(name);
     setForm({ type: updated[name].type, contact: updated[name].contact, lang: updated[name].lang, days });
     setOpenSection("edit");
@@ -474,8 +475,14 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           </Select>
         </div>
 
-        <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
+        <div style={L}>{isZH ? "下单日（Count 里显示的天数）" : "Count Days (when to count stock)"}</div>
         <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
+
+        <div style={L}>{isZH ? "下单提醒日（哪天要下单给 supplier）" : "Order Reminder Day (when to place order)"}</div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
+          {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
+        </div>
+        <DayPicker value={form.orderDays ?? form.days ?? []} onChange={(day) => toggleDay(day, d => setForm(p => ({ ...p, orderDays: d(p.orderDays ?? p.days ?? []) })))} />
 
         <div style={L}>{isZH ? "默认低库存阈值（给旗下所有 item 用）" : "Default Low Stock Threshold (for all items)"}</div>
         <div style={{ marginBottom: "4px" }}>
@@ -550,8 +557,14 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           </Select>
         </div>
 
-        <div style={L}>{isZH ? "下单日" : "Order Days"}</div>
+        <div style={L}>{isZH ? "下单日（Count 显示）" : "Count Days"}</div>
         <DayPicker value={newSupplier.days} onChange={(day) => toggleDay(day, setNewSupplier)} />
+
+        <div style={L}>{isZH ? "下单提醒日" : "Order Reminder Day"}</div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
+          {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
+        </div>
+        <DayPicker value={newSupplier.orderDays ?? []} onChange={(day) => toggleDay(day, d => setNewSupplier(p => ({ ...p, orderDays: d(p.orderDays ?? []) })))} />
 
         <div style={L}>{isZH ? "默认低库存阈值" : "Default Low Stock Threshold"}</div>
         <div style={{ marginBottom: "4px" }}>
@@ -574,27 +587,105 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 }
 
 // ── Account section ───────────────────────────────────────────────────────────
+import { getNotifPermission, isNotifEnabled, setNotifEnabled, requestPermission } from "../utils/notifications.js";
 function AccountSection({ t, userName, onChangeName, onToast }) {
   const isZH = t.appSub === "库存系统";
   const [newName, setNewName] = useState(userName || "");
+  const [notifOn,  setNotifOn]  = useState(() => isNotifEnabled());
+  const [permission, setPermission] = useState(() => getNotifPermission());
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
+
+  async function handleToggleNotif() {
+    if (!notifOn) {
+      const granted = await requestPermission();
+      setPermission(getNotifPermission());
+      if (granted) {
+        setNotifEnabled(true);
+        setNotifOn(true);
+        onToast(isZH ? "通知已开启 ✓" : "Notifications enabled ✓", "success");
+      } else {
+        onToast(isZH ? "请在浏览器设置里允许通知" : "Please allow notifications in browser settings", "error");
+      }
+    } else {
+      setNotifEnabled(false);
+      setNotifOn(false);
+      onToast(isZH ? "通知已关闭" : "Notifications disabled", "info");
+    }
+  }
+
   return (
-    <Card style={{ padding: "14px" }}>
-      <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
-        {t.currentName}: <strong style={{ color: "var(--brand)" }}>{userName}</strong>
-      </div>
-      <div style={L}>{isZH ? "新名字" : "New Name"}</div>
-      <div style={{ marginBottom: "14px" }}>
-        <Input placeholder={t.namePlaceholder} value={newName} onChange={(e) => setNewName(e.target.value)} />
-      </div>
-      <PrimaryBtn onClick={() => {
-        if (!newName.trim()) return;
-        onChangeName(newName.trim());
-        onToast(t.nameChanged(newName.trim()), "success");
-      }}>
-        {isZH ? "保存名字" : "Save Name"}
-      </PrimaryBtn>
-    </Card>
+    <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+      {/* Name */}
+      <Card style={{ padding: "14px" }}>
+        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>
+          {t.currentName}: <strong style={{ color: "var(--brand)" }}>{userName}</strong>
+        </div>
+        <div style={L}>{isZH ? "新名字" : "New Name"}</div>
+        <div style={{ marginBottom: "14px" }}>
+          <Input placeholder={t.namePlaceholder} value={newName} onChange={(e) => setNewName(e.target.value)} />
+        </div>
+        <PrimaryBtn onClick={() => {
+          if (!newName.trim()) return;
+          onChangeName(newName.trim());
+          onToast(t.nameChanged(newName.trim()), "success");
+        }}>
+          {isZH ? "保存名字" : "Save Name"}
+        </PrimaryBtn>
+      </Card>
+
+      {/* Notifications */}
+      <Card style={{ padding: "14px" }}>
+        <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--text-primary)", marginBottom: "4px" }}>
+          🔔 {isZH ? "低库存通知" : "Low Stock Notifications"}
+        </div>
+        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "14px", lineHeight: 1.5 }}>
+          {isZH
+            ? "当下单日到来且有货品低库存时，系统会发出提醒通知。"
+            : "Get notified when it's an order day and items are low on stock."}
+        </div>
+
+        {permission === "unsupported" ? (
+          <div style={{ fontSize: "12px", color: "var(--text-faint)", padding: "10px", background: "var(--surface2)", borderRadius: "var(--radius-sm)", textAlign: "center" }}>
+            {isZH ? "此浏览器不支持通知功能" : "Notifications not supported in this browser"}
+          </div>
+        ) : permission === "denied" ? (
+          <div style={{ fontSize: "12px", color: "var(--amber-600)", padding: "10px", background: "var(--amber-50)", border: "1px solid var(--amber-100)", borderRadius: "var(--radius-sm)" }}>
+            {isZH
+              ? "通知权限已被拒绝。请在浏览器设置 → 网站设置 → 通知 里手动允许。"
+              : "Notifications blocked. Go to browser Settings → Site Settings → Notifications to allow."}
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ fontSize: "12px", color: "var(--text-secondary)" }}>
+              {notifOn
+                ? (isZH ? "✓ 通知已开启" : "✓ Notifications on")
+                : (isZH ? "通知已关闭" : "Notifications off")}
+            </div>
+            {/* Toggle switch */}
+            <button onClick={handleToggleNotif} style={{
+              width: 44, height: 26, borderRadius: 99, border: "none",
+              background: notifOn ? "var(--brand)" : "var(--border2)",
+              position: "relative", cursor: "pointer", transition: "background 0.2s",
+              flexShrink: 0,
+            }}>
+              <div style={{
+                position: "absolute", top: 3,
+                left: notifOn ? 21 : 3,
+                width: 20, height: 20, borderRadius: "50%",
+                background: "#fff", transition: "left 0.2s",
+                boxShadow: "0 1px 4px rgba(0,0,0,0.2)",
+              }} />
+            </button>
+          </div>
+        )}
+
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginTop: "10px", lineHeight: 1.5 }}>
+          {isZH
+            ? "💡 iPhone 用户需要先将 app 加入主屏幕（PWA）才能收到通知。"
+            : "💡 iPhone users need to add this app to Home Screen (PWA) first."}
+        </div>
+      </Card>
+    </div>
   );
 }
 
