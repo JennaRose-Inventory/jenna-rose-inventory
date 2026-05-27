@@ -482,7 +482,13 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
           {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
         </div>
-        <DayPicker value={form.orderDays ?? form.days ?? []} onChange={(day) => toggleDay(day, d => setForm(p => ({ ...p, orderDays: d(p.orderDays ?? p.days ?? []) })))} />
+        <DayPicker value={form.orderDays ?? form.days ?? []} onChange={(day) => {
+          setForm(p => {
+            const current = p.orderDays ?? p.days ?? [];
+            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+            return { ...p, orderDays: next };
+          });
+        }} />
 
         <div style={L}>{isZH ? "默认低库存阈值（给旗下所有 item 用）" : "Default Low Stock Threshold (for all items)"}</div>
         <div style={{ marginBottom: "4px" }}>
@@ -564,7 +570,13 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
           {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
         </div>
-        <DayPicker value={newSupplier.orderDays ?? []} onChange={(day) => toggleDay(day, d => setNewSupplier(p => ({ ...p, orderDays: d(p.orderDays ?? []) })))} />
+        <DayPicker value={newSupplier.orderDays ?? []} onChange={(day) => {
+          setNewSupplier(p => {
+            const current = p.orderDays ?? [];
+            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+            return { ...p, orderDays: next };
+          });
+        }} />
 
         <div style={L}>{isZH ? "默认低库存阈值" : "Default Low Stock Threshold"}</div>
         <div style={{ marginBottom: "4px" }}>
