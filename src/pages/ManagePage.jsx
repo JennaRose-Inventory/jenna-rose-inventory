@@ -587,7 +587,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
 }
 
 // ── Account section ───────────────────────────────────────────────────────────
-import { getNotifPermission, isNotifEnabled, setNotifEnabled, requestPermission } from "../utils/notifications.js";
+import { getNotifPermission, isNotifEnabled, setNotifEnabled, requestPermission, unsubscribe } from "../utils/notifications.js";
 function AccountSection({ t, userName, onChangeName, onToast }) {
   const isZH = t.appSub === "库存系统";
   const [newName, setNewName] = useState(userName || "");
@@ -597,17 +597,20 @@ function AccountSection({ t, userName, onChangeName, onToast }) {
 
   async function handleToggleNotif() {
     if (!notifOn) {
-      const granted = await requestPermission();
+      const result = await requestPermission(userName);
       setPermission(getNotifPermission());
-      if (granted) {
-        setNotifEnabled(true);
+      if (result.granted) {
         setNotifOn(true);
-        onToast(isZH ? "通知已开启 ✓" : "Notifications enabled ✓", "success");
+        if (result.pushFailed) {
+          onToast(isZH ? "通知已开启（仅限 app 内）" : "Notifications on (in-app only)", "info");
+        } else {
+          onToast(isZH ? "通知已开启 ✓ 关闭 app 也能收到" : "Notifications enabled ✓ Works in background!", "success");
+        }
       } else {
         onToast(isZH ? "请在浏览器设置里允许通知" : "Please allow notifications in browser settings", "error");
       }
     } else {
-      setNotifEnabled(false);
+      await unsubscribe();
       setNotifOn(false);
       onToast(isZH ? "通知已关闭" : "Notifications disabled", "info");
     }

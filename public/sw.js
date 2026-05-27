@@ -1,5 +1,6 @@
 // Service Worker — Jenna Rose Inventory
-const CACHE_NAME  = "jr-cache-v2";
+// Handles background push notifications
+const CACHE_NAME  = "jr-cache-v3";
 const OFFLINE_URL = "/";
 
 self.addEventListener("install", (e) => {
@@ -16,25 +17,47 @@ self.addEventListener("activate", (e) => {
   self.clients.claim();
 });
 
-// Network first, fallback to cache for navigation
+// Network first for navigation
 self.addEventListener("fetch", (e) => {
   if (e.request.mode === "navigate") {
     e.respondWith(fetch(e.request).catch(() => caches.match(OFFLINE_URL)));
   }
 });
 
-// Handle notification clicks
+// ── Handle background push notifications ──────────────────────────────────────
+self.addEventListener("push", (e) => {
+  if (!e.data) return;
+
+  let data;
+  try { data = e.data.json(); }
+  catch { data = { title: "Jenna Rose", body: e.data.text() }; }
+
+  const options = {
+    body:               data.body  ?? "",
+    icon:               data.icon  ?? "/icon.svg",
+    badge:              data.badge ?? "/icon.svg",
+    tag:                data.tag   ?? "jr-notification",
+    renotify:           true,
+    requireInteraction: false,
+    vibrate:            [200, 100, 200],
+    data:               { url: "/" },
+  };
+
+  e.waitUntil(
+    self.registration.showNotification(data.title ?? "⚠️ Low Stock Alert", options)
+  );
+});
+
+// ── Handle notification tap → open app ───────────────────────────────────────
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
   e.waitUntil(
     clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
-      // Focus existing window if open
       for (const client of list) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
           return client.focus();
         }
       }
-      // Otherwise open new window
       if (clients.openWindow) return clients.openWindow("/");
     })
   );

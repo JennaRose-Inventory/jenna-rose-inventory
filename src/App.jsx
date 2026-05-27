@@ -10,7 +10,7 @@ import { countKey } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
 import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
 import { Icon } from "./components/UI.jsx";
-import { checkOrderDayAlerts } from "./utils/notifications.js";
+import { checkOrderDayAlerts, syncSuppliersToServer } from "./utils/notifications.js";
 import Toast from "./components/Toast.jsx";
 
 import CountPage       from "./pages/CountPage.jsx";
@@ -156,7 +156,11 @@ export default function App() {
     setLang(next); localStorage.setItem("jr_lang", next);
   }
   function handleNameDone(name) { localStorage.setItem("jr_user", name); setUserName(name); }
-  function handleUpdateSuppliers(updated) { saveSuppliers(updated); setSuppliers(updated); }
+  function handleUpdateSuppliers(updated) {
+    saveSuppliers(updated);
+    setSuppliers(updated);
+    syncSuppliersToServer(updated);
+  }
 
   useEffect(() => { loadAll(); }, []);
 
