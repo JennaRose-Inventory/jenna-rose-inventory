@@ -61,7 +61,13 @@ export default async function handler(req, res) {
 
     // Get suppliers config (stored in a single doc)
     const suppliersDoc = await db.collection("config").doc("suppliers").get();
-    const suppliers    = suppliersDoc.exists ? suppliersDoc.data() : {};
+    const suppliersRaw = suppliersDoc.exists ? suppliersDoc.data() : {};
+    const lang         = suppliersRaw._lang ?? "en";
+    const isZH         = lang === "zh";
+    // Remove meta fields before processing
+    const suppliers = Object.fromEntries(
+      Object.entries(suppliersRaw).filter(([k]) => !k.startsWith("_"))
+    );
 
     // Get latest inventory record
     const historySnap = await db.collection("inventoryHistory")
@@ -105,15 +111,17 @@ export default async function handler(req, res) {
       if (lowItems.length === 1) {
         const item  = lowItems[0];
         const stock = stockMap[`${category}||${item.name}`];
-        alerts.push({
-          title: "⚠️ Low Stock Alert",
-          body:  `${item.name} only has ${stock} left. Today is ${category} order day — remember to order!`,
-        });
+        const title = isZH ? "⚠️ 低库存提醒" : "⚠️ Low Stock Alert";
+        const body  = isZH
+          ? `${item.name} 只剩 ${stock} 个，今天是 ${category} 下单日，记得订货！`
+          : `${item.name} only has ${stock} left. Today is ${category} order day — remember to order!`;
+        alerts.push({ title, body });
       } else {
-        alerts.push({
-          title: `⚠️ ${category} Low Stock`,
-          body:  `Today is order day. ${lowItems.length} items low: ${lowItems.slice(0,3).map(i=>i.name).join(", ")}${lowItems.length>3?"...":""}`,
-        });
+        const title = isZH ? `⚠️ ${category} 低库存提醒` : `⚠️ ${category} Low Stock`;
+        const body  = isZH
+          ? `今天是下单日，${lowItems.length} 个货品库存不足：${lowItems.slice(0,3).map(i=>i.name).join("、")}${lowItems.length>3?"等":""}`
+          : `Today is order day. ${lowItems.length} items low: ${lowItems.slice(0,3).map(i=>i.name).join(", ")}${lowItems.length>3?"...":""}`;
+        alerts.push({ title, body });
       }
     });
 

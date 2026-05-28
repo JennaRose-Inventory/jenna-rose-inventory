@@ -153,7 +153,10 @@ export default function App() {
   function clearAllCounts() { setCounts({}); }
   function toggleLang() {
     const next = lang === "en" ? "zh" : "en";
-    setLang(next); localStorage.setItem("jr_lang", next);
+    setLang(next);
+    localStorage.setItem("jr_lang", next);
+    // Sync lang preference to server
+    syncSuppliersToServer(suppliers);
   }
   function handleNameDone(name) { localStorage.setItem("jr_user", name); setUserName(name); }
   function handleUpdateSuppliers(updated) {

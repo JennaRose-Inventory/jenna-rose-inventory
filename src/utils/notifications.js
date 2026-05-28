@@ -104,10 +104,11 @@ export async function unsubscribe() {
 // ── Sync suppliers to server (so cron can read them) ─────────────────────────
 export async function syncSuppliersToServer(suppliers) {
   try {
+    const lang = localStorage.getItem("jr_lang") || "en";
     await fetch("/api/save-suppliers", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(suppliers),
+      body: JSON.stringify({ ...suppliers, _lang: lang }),
     });
   } catch (err) {
     console.warn("Supplier sync failed:", err);
