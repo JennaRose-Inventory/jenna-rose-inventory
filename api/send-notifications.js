@@ -144,7 +144,7 @@ export default async function handler(req, res) {
               title: alert.title,
               body:  alert.body,
               icon:  "/icon.svg",
-              badge: "/icon.svg",
+              badge: "/badge.png",
               tag:   `jr-${todayStr}-${alert.title.slice(0,20)}`,
             })
           );

@@ -34,8 +34,8 @@ self.addEventListener("push", (e) => {
 
   const options = {
     body:               data.body  ?? "",
-    icon:               data.icon  ?? "/icon.svg",
-    badge:              data.badge ?? "/icon.svg",
+    icon:               "/icon.svg",
+    badge:              "/badge.png",
     tag:                data.tag   ?? "jr-notification",
     renotify:           true,
     requireInteraction: false,
