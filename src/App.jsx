@@ -184,6 +184,18 @@ export default function App() {
       loadedHistory = snap.docs.map((d) => ({ ...d.data(), docId: d.id }));
       setHistoryAndRef(loadedHistory);
     } catch { setHistoryData([]); }
+
+    // Load suppliers from Firestore (source of truth) — sync across all devices
+    try {
+      const suppSnap = await getDocs(collection(db, "config"));
+      const suppDoc  = suppSnap.docs.find(d => d.id === "suppliers");
+      if (suppDoc) {
+        const serverSuppliers = suppDoc.data();
+        saveSuppliers(serverSuppliers);   // update localStorage
+        setSuppliers(serverSuppliers);    // update state
+      }
+    } catch {}
+
     setCounts({});
     setLoading(false);
     // Check order day low stock alerts after load
