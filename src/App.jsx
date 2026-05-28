@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  collection, addDoc, getDocs, deleteDoc, updateDoc,
+  collection, addDoc, getDocs, getDoc, deleteDoc, updateDoc,
   query, orderBy, doc,
 } from "firebase/firestore";
 
@@ -193,9 +193,13 @@ export default function App() {
       const suppSnap = await getDocs(collection(db, "config"));
       const suppDoc  = suppSnap.docs.find(d => d.id === "suppliers");
       if (suppDoc) {
-        const serverSuppliers = suppDoc.data();
-        saveSuppliers(serverSuppliers);   // update localStorage
-        setSuppliers(serverSuppliers);    // update state
+        const raw = suppDoc.data();
+        // Strip meta fields (prefixed with _) before using as suppliers
+        const serverSuppliers = Object.fromEntries(
+          Object.entries(raw).filter(([k]) => !k.startsWith("_"))
+        );
+        saveSuppliers(serverSuppliers);
+        setSuppliers(serverSuppliers);
       }
     } catch {}
 
@@ -204,7 +208,7 @@ export default function App() {
     // Check order day low stock alerts after load
     setTimeout(() => {
       checkOrderDayAlerts({
-        items:       loadItems(),
+        items:       loadedHistory[0]?.items ?? loadItems(),
         suppliers:   loadSuppliers(),
         historyData: loadedHistory,
         lang:        localStorage.getItem("jr_lang") || "en",
@@ -262,20 +266,13 @@ export default function App() {
       const timeStr  = now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
       const existingDocId = todayDocIdRef.current;
 
-      // Debug — remove after fix confirmed
-      console.log("[SAVE] todayStr:", todayStr);
-      console.log("[SAVE] todayDocIdRef.current:", existingDocId);
-      console.log("[SAVE] historyData dates:", historyData.map(r => r.date + " | " + r.docId));
-
       if (existingDocId) {
-        console.log("[SAVE] → MERGE into", existingDocId);
-        const existingSnap = await getDocs(
-          query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"))
-        );
-        const existingDoc = existingSnap.docs.find(d => d.id === existingDocId);
+        // ── Merge into existing today's record ──
+        const existingDocRef  = doc(db, "inventoryHistory", existingDocId);
+        const existingDocSnap = await getDoc(existingDocRef);
         const existingMap = {};
-        if (existingDoc) {
-          (existingDoc.data().items ?? []).forEach(i => {
+        if (existingDocSnap.exists()) {
+          (existingDocSnap.data().items ?? []).forEach(i => {
             existingMap[`${i.category}||${i.name}`] = i.stock;
           });
         }
@@ -290,13 +287,12 @@ export default function App() {
         });
         showToast(isZH ? "已合并更新 ✓" : "Merged ✓", "success");
       } else {
-        console.log("[SAVE] → NEW document");
+        // ── No record today — create new ──
         const itemsToSave = items.map(item => ({ ...item, stock: counts[countKey(item)] ?? "" }));
         const newDocRef = await addDoc(collection(db, "inventoryHistory"), {
           date: todayStr, time: timeStr, createdAt: now,
           savedBy: userName || "—", selectedDay, items: itemsToSave,
         });
-        console.log("[SAVE] new docId:", newDocRef.id);
         todayDocIdRef.current = newDocRef.id;
         showToast(t.savedOk, "success");
       }
