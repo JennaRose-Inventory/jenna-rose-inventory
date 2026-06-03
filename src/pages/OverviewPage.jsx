@@ -430,9 +430,9 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                           {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
                           {item.name}
                         </div>
-                        {/* Freshness info row */}
+                        {/* Freshness info — warning only, no restock button */}
                         {freshDays > 0 && daysOld !== null && hasLatestStock && (
-                          <div style={{ marginTop:"3px", display:"flex", alignItems:"center", gap:"6px" }}>
+                          <div style={{ marginTop:"3px" }}>
                             <span style={{
                               fontSize:"10px", fontWeight:600,
                               color: freshWarn ? "var(--amber-600)" : "var(--text-faint)",
@@ -445,40 +445,6 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                                 ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
                                 : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
                             </span>
-                            {/* Restock date */}
-                            <span style={{ fontSize:"9px", color:"var(--text-faint)" }}>
-                              {freshMap[key] ? `(${freshMap[key]})` : ""}
-                            </span>
-                            {/* Restock button */}
-                            {onFreshDate && (
-                              <button onClick={() => onFreshDate(item.category, item.name)} style={{
-                                fontSize:"9px", fontWeight:600,
-                                color: "var(--brand-mid)",
-                                background: "var(--brand-ghost)",
-                                border: "1px solid var(--brand-pale)",
-                                borderRadius: "var(--radius-full)",
-                                padding: "1px 8px",
-                                cursor: "pointer",
-                              }}>
-                                {isZH ? "收货" : "Restock"}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                        {/* First time restock button (no record yet) */}
-                        {freshDays > 0 && daysOld === null && hasLatestStock && onFreshDate && (
-                          <div style={{ marginTop:"3px" }}>
-                            <button onClick={() => onFreshDate(item.category, item.name)} style={{
-                              fontSize:"9px", fontWeight:600,
-                              color: "var(--text-muted)",
-                              background: "var(--surface2)",
-                              border: "1px solid var(--border)",
-                              borderRadius: "var(--radius-full)",
-                              padding: "1px 8px",
-                              cursor: "pointer",
-                            }}>
-                              {isZH ? "+ 记录收货日" : "+ Mark restock"}
-                            </button>
                           </div>
                         )}
                       </div>

@@ -110,7 +110,7 @@ function DaySwitchWarning({ onConfirm, onCancel, t }) {
 }
 
 // ── Main CountPage ────────────────────────────────────────────────────────────
-export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord, todayCount = 0 }) {
+export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord, todayCount = 0, suppliers = {}, freshMap = {}, onFreshDate }) {
   const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
   const [selectedDay, setSelectedDay] = useState(EN_DAYS[todayIdx]);
   const [saving, setSaving]           = useState(false);
@@ -311,13 +311,15 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
           <SectionLabel>{category}</SectionLabel>
           <div style={{ background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)", overflow: "hidden" }}>
             {grouped[category].map((item, idx) => {
-              const key  = countKey(item);
-              const val  = counts[key] ?? "";
-              const type = effectiveType(item);
-              const lastVal = lastMap[key];
-              const hasLast = lastVal !== undefined && lastVal !== "";
+              const key      = countKey(item);
+              const val      = counts[key] ?? "";
+              const type     = effectiveType(item);
+              const lastVal  = lastMap[key];
+              const hasLast  = lastVal !== undefined && lastVal !== "";
+              const freshDays = item.freshDays ?? 0;
+              const restockDate = freshDays > 0 ? freshMap[key] : null;
               return (
-                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px" }}>
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{item.name}</div>
                     {hasLast && (
@@ -327,6 +329,22 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
                           {lastVal === "Enough" ? "✓" : lastVal === "Need Order" ? "⚠" : lastVal}
                         </span>
                       </div>
+                    )}
+                    {/* Mark Restock button — only for fresh-tracked items */}
+                    {freshDays > 0 && onFreshDate && (
+                      <button onClick={() => onFreshDate(item.category, item.name)} style={{
+                        marginTop: "4px",
+                        fontSize: "9px", fontWeight: 600,
+                        color: "var(--brand-mid)",
+                        background: "var(--brand-ghost)",
+                        border: "1px solid var(--brand-pale)",
+                        borderRadius: "var(--radius-full)",
+                        padding: "2px 9px",
+                        cursor: "pointer",
+                        display: "inline-flex", alignItems: "center", gap: "4px",
+                      }}>
+                        📦 {isZH ? `收货${restockDate ? ` · ${restockDate}` : ""}` : `Restock${restockDate ? ` · ${restockDate}` : ""}`}
+                      </button>
                     )}
                   </div>
                   {type === "status" ? (
