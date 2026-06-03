@@ -219,24 +219,44 @@ export default function App() {
     { id:"Manage",      iconName:"manage",   label:t.navManage   },
   ];
 
-  // setItems wrappers — route to correct department
+  // setItems wrappers — route to correct department + sync to Firestore
   function setItems(updated) {
     const val = typeof updated === "function" ? updated(items) : updated;
-    persistItems(val); setItemsState(val);
+    persistItems(val);
+    setItemsState(val);
+    syncItemsToServer(val, null);
   }
   function setKItems(updated) {
     const val = typeof updated === "function" ? updated(kItems) : updated;
-    persistKitchenItems(val); setKItemsState(val);
+    persistKitchenItems(val);
+    setKItemsState(val);
+    syncItemsToServer(null, val);
   }
   function setActiveItems(updated) { isKitchen ? setKItems(updated) : setItems(updated); }
 
+  // ── Sync functions to Firestore ───────────────────────────────────────────
+  async function syncItemsToServer(frontendItems, kitchenItems) {
+    try {
+      if (frontendItems) await setDoc(doc(db, "config", "items_frontend"), { items: frontendItems });
+      if (kitchenItems)  await setDoc(doc(db, "config", "items_kitchen"),  { items: kitchenItems  });
+    } catch (err) { console.error("syncItems error:", err); }
+  }
+
+  async function syncKitchenSuppliersToServer(kSupp) {
+    try {
+      await setDoc(doc(db, "config", "suppliers_kitchen"), kSupp);
+    } catch (err) { console.error("syncKitchenSuppliers error:", err); }
+  }
+
   function handleUpdateSuppliers(updated) {
     if (isKitchen) {
-      saveKitchenSuppliers(updated); setKSuppliers(updated);
-      // Kitchen suppliers stay local only — no Firestore sync needed
+      saveKitchenSuppliers(updated);
+      setKSuppliers(updated);
+      syncKitchenSuppliersToServer(updated);
     } else {
-      saveSuppliers(updated); setSuppliers(updated);
-      syncSuppliersToServer(updated); // only frontend goes to Firestore
+      saveSuppliers(updated);
+      setSuppliers(updated);
+      syncSuppliersToServer(updated);
     }
   }
 
@@ -288,6 +308,8 @@ export default function App() {
 
   async function loadAll() {
     let loadedHistory = [];
+
+    // ── Load history ──────────────────────────────────────────────────────────
     try {
       const q = query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
@@ -295,38 +317,68 @@ export default function App() {
       setHistoryAndRef(loadedHistory);
     } catch { setHistoryData([]); }
 
-    // Load FRONTEND suppliers from Firestore
+    // ── Load ALL config from Firestore in one go ───────────────────────────────
     try {
-      const suppSnap = await getDocs(collection(db, "config"));
-      const suppDoc  = suppSnap.docs.find(d => d.id === "suppliers");
-      if (suppDoc) {
-        const raw = suppDoc.data();
-        const kitchenCats = ["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"];
-        // Strip meta fields and kitchen categories
-        const serverSuppliers = Object.fromEntries(
-          Object.entries(raw).filter(([k]) => !k.startsWith("_") && !kitchenCats.includes(k))
-        );
-        // If Firestore had kitchen suppliers, delete the doc to force clean state
+      const configSnap = await getDocs(collection(db, "config"));
+      const configDocs = {};
+      configSnap.docs.forEach(d => { configDocs[d.id] = d.data(); });
+
+      const kitchenCats = ["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"];
+
+      // Frontend suppliers
+      if (configDocs["suppliers"]) {
+        const raw = configDocs["suppliers"];
         const hadKitchen = Object.keys(raw).some(k => kitchenCats.includes(k));
         if (hadKitchen) {
-          // Delete corrupted doc
           await deleteDoc(doc(db, "config", "suppliers"));
-          // Reset to defaults
           saveSuppliers({});
           setSuppliers(loadSuppliers());
-        } else if (Object.keys(serverSuppliers).length > 0) {
-          saveSuppliers(serverSuppliers);
-          setSuppliers(serverSuppliers);
+        } else {
+          const cleaned = Object.fromEntries(
+            Object.entries(raw).filter(([k]) => !k.startsWith("_"))
+          );
+          if (Object.keys(cleaned).length > 0) {
+            saveSuppliers(cleaned);
+            setSuppliers(cleaned);
+          }
         }
       }
-    } catch {}
 
-    // Load fresh dates from Firestore
+      // Kitchen suppliers
+      if (configDocs["suppliers_kitchen"]) {
+        const kSupp = Object.fromEntries(
+          Object.entries(configDocs["suppliers_kitchen"]).filter(([k]) => !k.startsWith("_"))
+        );
+        if (Object.keys(kSupp).length > 0) {
+          saveKitchenSuppliers(kSupp);
+          setKSuppliers(kSupp);
+        }
+      }
+
+      // Frontend items
+      if (configDocs["items_frontend"]) {
+        const serverItems = configDocs["items_frontend"].items;
+        if (Array.isArray(serverItems) && serverItems.length > 0) {
+          persistItems(serverItems);
+          setItemsState(serverItems);
+        }
+      }
+
+      // Kitchen items
+      if (configDocs["items_kitchen"]) {
+        const serverKItems = configDocs["items_kitchen"].items;
+        if (Array.isArray(serverKItems) && serverKItems.length > 0) {
+          persistKitchenItems(serverKItems);
+          setKItemsState(serverKItems);
+        }
+      }
+    } catch (err) { console.error("Config load error:", err); }
+
+    // ── Load fresh dates ───────────────────────────────────────────────────────
     try {
       const freshSnap = await getDocs(collection(db, "freshDates"));
       const map = {};
       freshSnap.docs.forEach(d => {
-        // doc ID uses __ instead of || (Firestore doesn't allow ||)
         map[d.id.replace(/__/g, "||")] = d.data().date;
       });
       setFreshMap(map);
@@ -334,7 +386,8 @@ export default function App() {
 
     setCounts({});
     setLoading(false);
-    // Check order day low stock alerts after load
+
+    // Check order day alerts
     setTimeout(() => {
       checkOrderDayAlerts({
         items:       loadedHistory[0]?.items ?? loadItems(),
