@@ -6,9 +6,11 @@ import {
 
 import { db } from "./firebase.js";
 import { itemsData } from "./data/items.js";
+import { kitchenItemsData, kitchenSuppliersDefault } from "./data/kitchenItems.js";
 import { countKey } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
 import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
+import { isOwner, getDept, setDept, deptLabel, loadKitchenSuppliers, saveKitchenSuppliers } from "./utils/department.js";
 import { Icon } from "./components/UI.jsx";
 import { checkOrderDayAlerts, syncSuppliersToServer } from "./utils/notifications.js";
 import Toast from "./components/Toast.jsx";
@@ -20,17 +22,17 @@ import DashboardPage   from "./pages/DashboardPage.jsx";
 import PredictionsPage from "./pages/PredictionsPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
 
-const MAX_HISTORY       = 14;
-const ITEMS_STORAGE_KEY = "jr_items_v1";
+const MAX_HISTORY        = 14;
+const ITEMS_STORAGE_KEY  = "jr_items_v1";
+const KITEMS_STORAGE_KEY = "jr_items_kitchen_v1";
 
-// ── Persist items ─────────────────────────────────────────────────────────────
+// ── Persist frontend items ────────────────────────────────────────────────────
 function loadItems() {
   try {
     const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       const savedMap = {};
-      // Key by original name AND new name to handle renames
       parsed.forEach(i => {
         savedMap[`${i.category}||${i.name}`] = i;
         if (i._origName) savedMap[`${i.category}||${i._origName}`] = i;
@@ -39,7 +41,6 @@ function loadItems() {
         const key = `${item.category}||${item.name}`;
         return savedMap[key] ? { ...item, ...savedMap[key] } : item;
       });
-      // Add custom items not in itemsData
       parsed.forEach(item => {
         const key  = `${item.category}||${item.name}`;
         const orig = `${item.category}||${item._origName}`;
@@ -54,9 +55,37 @@ function loadItems() {
   } catch {}
   return [...itemsData];
 }
-
 function persistItems(items) {
   try { localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(items)); } catch {}
+}
+
+// ── Persist kitchen items ─────────────────────────────────────────────────────
+function loadKitchenItems() {
+  try {
+    const saved = localStorage.getItem(KITEMS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const savedMap = {};
+      parsed.forEach(i => {
+        savedMap[`${i.category}||${i.name}`] = i;
+        if (i._origName) savedMap[`${i.category}||${i._origName}`] = i;
+      });
+      const merged = kitchenItemsData.map(item => {
+        const key = `${item.category}||${item.name}`;
+        return savedMap[key] ? { ...item, ...savedMap[key] } : item;
+      });
+      parsed.forEach(item => {
+        const key = `${item.category}||${item.name}`;
+        const inBase = kitchenItemsData.find(i => `${i.category}||${i.name}` === key);
+        if (!inBase) merged.push(item);
+      });
+      return merged;
+    }
+  } catch {}
+  return [...kitchenItemsData];
+}
+function persistKitchenItems(items) {
+  try { localStorage.setItem(KITEMS_STORAGE_KEY, JSON.stringify(items)); } catch {}
 }
 
 // ── Network hook ──────────────────────────────────────────────────────────────
@@ -107,26 +136,34 @@ function NameSetup({ onDone, t, lang, onToggleLang }) {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [lang, setLang]           = useState(() => localStorage.getItem("jr_lang") || "en");
-  const [userName, setUserName]   = useState(() => localStorage.getItem("jr_user") || "");
-  const [suppliers, setSuppliers] = useState(() => loadSuppliers());
-  const [page, setPage]           = useState("Count");
-  const [items, setItemsState]    = useState(() => loadItems());
-  const [counts, setCounts]       = useState({});
+  const [lang, setLang]               = useState(() => localStorage.getItem("jr_lang") || "en");
+  const [userName, setUserName]       = useState(() => localStorage.getItem("jr_user") || "");
+  const [dept, setDeptState]          = useState(() => getDept()); // null = not chosen yet
+  // Frontend state
+  const [suppliers, setSuppliers]     = useState(() => loadSuppliers());
+  const [items, setItemsState]        = useState(() => loadItems());
+  // Kitchen state
+  const [kSuppliers, setKSuppliers]   = useState(() => loadKitchenSuppliers() ?? kitchenSuppliersDefault);
+  const [kItems, setKItemsState]      = useState(() => loadKitchenItems());
+  // Shared state
+  const [page, setPage]               = useState("Count");
+  const [counts, setCounts]           = useState({});
   const [historyData, setHistoryData] = useState([]);
   const [freshMap, setFreshMap]       = useState({});
   const [loading, setLoading]     = useState(true);
   const [toast, setToast]         = useState(null);
   const isOnline = useOnline();
   const t = STRINGS[lang];
+  const owner     = isOwner(userName);
+  const isKitchen = dept === "kitchen";
 
-  // Refs to avoid stale closures
-  const reloadHistoryRef = useRef(null);
-  const todayDocIdRef    = useRef(null); // stores today's Firebase doc ID for merge
+  // Active department data
+  const activeItems     = isKitchen ? kItems     : items;
+  const activeSuppliers = isKitchen ? kSuppliers : suppliers;
 
   const allCategories = [...new Set([
-    ...itemsData.map((i) => i.category),
-    ...Object.keys(suppliers),
+    ...activeItems.map((i) => i.category),
+    ...Object.keys(activeSuppliers),
   ])];
 
   const NAV = [
@@ -138,6 +175,36 @@ export default function App() {
     { id:"Manage",      iconName:"manage",   label:t.navManage   },
   ];
 
+  // setItems wrappers — route to correct department
+  function setItems(updated) {
+    const val = typeof updated === "function" ? updated(items) : updated;
+    persistItems(val); setItemsState(val);
+  }
+  function setKItems(updated) {
+    const val = typeof updated === "function" ? updated(kItems) : updated;
+    persistKitchenItems(val); setKItemsState(val);
+  }
+  function setActiveItems(updated) { isKitchen ? setKItems(updated) : setItems(updated); }
+
+  function handleUpdateSuppliers(updated) {
+    if (isKitchen) {
+      saveKitchenSuppliers(updated); setKSuppliers(updated);
+    } else {
+      saveSuppliers(updated); setSuppliers(updated);
+      syncSuppliersToServer(updated);
+    }
+  }
+
+  function switchDept(d) {
+    setDept(d); setDeptState(d);
+    setCounts({});
+    setPage("Count");
+  }
+
+  // Refs to avoid stale closures
+  const reloadHistoryRef = useRef(null);
+  const todayDocIdRef    = useRef(null);
+
   function setHistoryAndRef(docs) {
     const todayStr = new Date().toLocaleDateString("en-GB");
     const todayDoc = docs.find(d => d.date === todayStr);
@@ -145,26 +212,14 @@ export default function App() {
     setHistoryData(docs);
   }
 
-  function setItems(updated) {
-    const val = typeof updated === "function" ? updated(items) : updated;
-    persistItems(val);
-    setItemsState(val);
-  }
-
   function clearAllCounts() { setCounts({}); }
   function toggleLang() {
     const next = lang === "en" ? "zh" : "en";
     setLang(next);
     localStorage.setItem("jr_lang", next);
-    // Sync lang preference to server
-    syncSuppliersToServer(suppliers);
+    syncSuppliersToServer(activeSuppliers);
   }
   function handleNameDone(name) { localStorage.setItem("jr_user", name); setUserName(name); }
-  function handleUpdateSuppliers(updated) {
-    saveSuppliers(updated);
-    setSuppliers(updated);
-    syncSuppliersToServer(updated);
-  }
 
   useEffect(() => { loadAll(); }, []);
 
@@ -301,7 +356,7 @@ export default function App() {
             existingMap[`${i.category}||${i.name}`] = i.stock;
           });
         }
-        const mergedItems = items.map((item) => {
+        const mergedItems = activeItems.map((item) => {
           const key      = `${item.category}||${item.name}`;
           const newStock = counts[countKey(item)];
           const hasNew   = newStock !== undefined && newStock !== "";
@@ -313,10 +368,11 @@ export default function App() {
         showToast(isZH ? "已合并更新 ✓" : "Merged ✓", "success");
       } else {
         // ── No record today — create new ──
-        const itemsToSave = items.map(item => ({ ...item, stock: counts[countKey(item)] ?? "" }));
+        const itemsToSave = activeItems.map(item => ({ ...item, stock: counts[countKey(item)] ?? "" }));
         const newDocRef = await addDoc(collection(db, "inventoryHistory"), {
           date: todayStr, time: timeStr, createdAt: now,
-          savedBy: userName || "—", selectedDay, items: itemsToSave,
+          savedBy: userName || "—", selectedDay, department: dept,
+          items: itemsToSave,
         });
         todayDocIdRef.current = newDocRef.id;
         showToast(t.savedOk, "success");
@@ -332,12 +388,42 @@ export default function App() {
   function showToast(message, type = "success") { setToast({ message, type, key: Date.now() }); }
   function handleCountChange(item, value) { setCounts((prev) => ({ ...prev, [countKey(item)]: value })); }
 
-  // Today's records (all of them) — fix #11 show all saves today
   const todayDate    = new Date().toLocaleDateString("en-GB");
-  const todayRecords = historyData.filter(r => r.date === todayDate);
-  const todayRecord  = todayRecords[0] ?? null; // most recent first
 
   if (!userName) return <NameSetup onDone={handleNameDone} t={t} lang={lang} onToggleLang={toggleLang} />;
+
+  // After name, owner can always see dept select, others only if no dept set yet
+  if (!dept) {
+    return (
+      <div style={{ minHeight:"100dvh", background:"var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px" }}>
+        <div style={{ background:"var(--surface)", borderRadius:"var(--radius-xl)", border:"1px solid var(--border)", boxShadow:"var(--shadow-lg)", padding:"36px 28px", width:"100%", maxWidth:"340px", textAlign:"center" }}>
+          <div style={{ fontWeight:700, fontSize:"18px", color:"var(--text-primary)", marginBottom:"6px", letterSpacing:"-0.02em" }}>
+            {t.appSub === "库存系统" ? `你好，${userName}` : `Hi, ${userName}`}
+          </div>
+          <div style={{ fontSize:"13px", color:"var(--text-muted)", marginBottom:"28px" }}>
+            {t.appSub === "库存系统" ? "你在哪个部门？" : "Which department are you in?"}
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:"12px" }}>
+            <button onClick={() => switchDept("frontend")} style={{ padding:"18px", borderRadius:"var(--radius-lg)", background:"var(--brand)", color:"#fff", fontSize:"16px", fontWeight:700, border:"none", cursor:"pointer", boxShadow:"var(--shadow-md)" }}>
+              ☕ {t.appSub === "库存系统" ? "前台" : "Front of House"}
+            </button>
+            <button onClick={() => switchDept("kitchen")} style={{ padding:"18px", borderRadius:"var(--radius-lg)", background:"#2d5016", color:"#fff", fontSize:"16px", fontWeight:700, border:"none", cursor:"pointer", boxShadow:"var(--shadow-md)" }}>
+              🍳 {t.appSub === "库存系统" ? "厨房" : "Kitchen"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Filter history by current department
+  const deptHistory = historyData.filter(r =>
+    !r.department || r.department === dept || (dept === "frontend" && !r.department)
+  );
+
+  // Today's records filtered by dept
+  const todayRecords = deptHistory.filter(r => r.date === todayDate);
+  const todayRecord  = todayRecords[0] ?? null;
 
   if (loading) {
     return (
@@ -363,18 +449,35 @@ export default function App() {
       {/* Top header */}
       <div style={{ position:"sticky", top:0, zIndex:200, background:"rgba(255,255,255,0.88)", backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", borderBottom:"1px solid var(--border)", padding:"0 16px", height:"var(--top-h)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-          <div style={{ width:34, height:34, borderRadius:"10px", background:"var(--brand)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-            <Icon name="coffee" size={17} color="#fff" strokeWidth={1.6} />
+          <div style={{ width:34, height:34, borderRadius:"10px", background: isKitchen ? "#2d5016" : "var(--brand)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <span style={{ fontSize:"16px" }}>{isKitchen ? "🍳" : "☕"}</span>
           </div>
           <div>
             <div style={{ fontWeight:700, fontSize:"14px", color:"var(--text-primary)", lineHeight:1.2, letterSpacing:"-0.02em" }}>Jenna Rose</div>
             <div style={{ display:"flex", alignItems:"center", gap:"4px", marginTop:"1px" }}>
               <Icon name="user" size={10} color="var(--brand-light)" strokeWidth={1.8} />
               <span style={{ fontSize:"10px", color:"var(--brand-light)", fontWeight:600 }}>{userName}</span>
+              <span style={{ fontSize:"10px", color:"var(--text-faint)" }}>·</span>
+              <span style={{ fontSize:"10px", color: isKitchen ? "#4a7c20" : "var(--brand-light)", fontWeight:600 }}>
+                {isKitchen ? (t.appSub === "库存系统" ? "厨房" : "Kitchen") : (t.appSub === "库存系统" ? "前台" : "Front")}
+              </span>
             </div>
           </div>
         </div>
         <div style={{ display:"flex", alignItems:"center", gap:"7px" }}>
+          {/* Dept switcher — owners only */}
+          {owner && (
+            <button onClick={() => switchDept(isKitchen ? "frontend" : "kitchen")} style={{
+              display:"flex", alignItems:"center", gap:"4px",
+              padding:"5px 10px", borderRadius:"var(--radius-full)",
+              border:`1.5px solid ${isKitchen ? "#4a7c20" : "var(--brand-pale)"}`,
+              background: isKitchen ? "#eaf3e0" : "var(--brand-ghost)",
+              fontSize:"11px", fontWeight:600,
+              color: isKitchen ? "#2d5016" : "var(--brand)",
+            }}>
+              {isKitchen ? "☕" : "🍳"} {isKitchen ? (t.appSub === "库存系统" ? "切前台" : "Front") : (t.appSub === "库存系统" ? "切厨房" : "Kitchen")}
+            </button>
+          )}
           <button onClick={toggleLang} style={{ display:"flex", alignItems:"center", gap:"5px", padding:"5px 10px", borderRadius:"var(--radius-full)", border:"1.5px solid var(--border)", background:"var(--surface2)", fontSize:"11px", fontWeight:600, color:"var(--text-secondary)", letterSpacing:"0.01em" }}>
             <Icon name="globe" size={12} color="var(--text-muted)" strokeWidth={1.6} />
             {lang === "en" ? "EN" : "中文"}
@@ -387,12 +490,13 @@ export default function App() {
 
       {/* Page content */}
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + 16px)`, overflowY:"auto" }}>
-        {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={suppliers} />}
-        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={items} />}
-        {page === "History"     && <HistoryPage     t={t} historyData={historyData} suppliers={suppliers} />}
-        {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
-        {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
-        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} />}
+        {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} />}
+        {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
+        {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} />}
+        {page === "Dashboard"   && <DashboardPage   t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
+        {page === "Predictions" && <PredictionsPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
+        {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} />}
+      </div>
       </div>
 
       {/* Bottom nav */}

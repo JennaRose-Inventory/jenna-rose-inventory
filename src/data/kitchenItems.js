@@ -1,0 +1,80 @@
+const EVERYDAY = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+
+export const kitchenItemsData = [
+  // ── ITG ──────────────────────────────────────────
+  { category:"ITG", name:"Sanremo No:5 Spaghetti",         type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"ITG", name:"FS Tortilla Wrap",                type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"ITG", name:"Anchor UHT Whipping Cream",       type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"ITG", name:"Anchor Unsalted Pat Butter",      type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"ITG", name:"Tabasco Sauce 60ml",              type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"ITG", name:"Anchor Cooking Cream",            type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── SE ───────────────────────────────────────────
+  { category:"SE", name:"Carbonara",                        type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SE", name:"Korean Spicy Sauce",               type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SE", name:"Honey Mustard Sauce",              type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SE", name:"Ma La Paste",                      type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SE", name:"Tom Yam Paste",                    type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SE", name:"Wafu Dressing",                    type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── GM ───────────────────────────────────────────
+  { category:"GM", name:"Chili Crab (Jenna's Special)",     type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Chicken Bolognese (Tomato)",       type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Salted Egg Butter Milk",           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Smoky BBQ Sauce",                  type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Mushroom Brown Sauce",             type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Kewpie Mayonnaise Japanese Style", type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Peach Oolong",                     type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"NongHyup Honey Citron",            type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"GM", name:"Mentai",                           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── SFS ──────────────────────────────────────────
+  { category:"SFS", name:"Arla Pizza Topping Shredded Cheese 2kg",  type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SFS", name:"Emborg Burger Slice Cheese Color (84s)",   type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SFS", name:"Chicken Breast",                           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SFS", name:"Debic UHT Spray Dairy Cream 32%",         type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── SHC ──────────────────────────────────────────
+  { category:"SHC", name:"Pizza 10in Thin (120pcs/ctn)",    type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"Prawn with Tail (31/40)",         type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"Smoked Salmon (1kg)",             type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"Smoked Duck (200g/pkt)",          type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"Unagi Kabayaki",                  type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"MC Sweet Potato Fries",           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"Croissant Dough 60gm",            type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"SHC", name:"French Croissant 70gm",           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── BIG J ────────────────────────────────────────
+  { category:"BIG J", name:"Black & White Sesame Burger Bun", type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"BIG J", name:"Rye Sourdough",                   type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"BIG J", name:"Jumbo Sausage",                   type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"BIG J", name:"Cheese Sausage",                  type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"BIG J", name:"Black Pepper Sausage",            type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"BIG J", name:"Chia Seed Bagel",                 type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── AK ───────────────────────────────────────────
+  { category:"AK", name:"Teriyaki Chicken Breast",         type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"AK", name:"Teriyaki Chicken Chop",           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"AK", name:"Mala Chicken Chop",               type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"AK", name:"Tomyam Chicken Chop",             type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"AK", name:"American BBQ Chicken Chop",       type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"AK", name:"Thai Basil Minced Chicken",       type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  // ── Seri Tanjung ─────────────────────────────────
+  { category:"Seri Tanjung", name:"KLFC Breaded Chicken Chop", type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Fish Chop",                 type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"US Chicken Thigh",          type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"PW Fish & Chip (38-40pcs)", type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Shoestring French Fries",   type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Popcorn Chicken",           type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Wedges",                    type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Triangle Hashbrown",        type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Chicken Ham",               type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Chili Sauce",               type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"Cheese Sauce",              type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+  { category:"Seri Tanjung", name:"KLFC Teriyaki Sauce",       type:"quantity", active:true, stock:0, department:"kitchen", days:EVERYDAY },
+];
+
+export const kitchenSuppliersDefault = {
+  "ITG":          { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:["Monday"],            lowStock:"" },
+  "SE":           { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:["Monday","Thursday"], lowStock:"" },
+  "GM":           { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:["Tuesday"],           lowStock:"" },
+  "SFS":          { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:["Tuesday"],           lowStock:"" },
+  "SHC":          { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:["Tuesday"],           lowStock:"" },
+  "BIG J":        { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:EVERYDAY,              lowStock:"" },
+  "AK":           { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:EVERYDAY,              lowStock:"" },
+  "Seri Tanjung": { type:"copy", contact:"", lang:"en", days:EVERYDAY, orderDays:EVERYDAY,              lowStock:"" },
+};
