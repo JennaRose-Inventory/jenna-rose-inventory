@@ -21,11 +21,20 @@ const DEFAULT_SUPPLIERS = {
   "散货":                   { type: "copy",   contact: "",                                                  lang: "zh" },
 };
 
+const KITCHEN_CATS = new Set(["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"]);
+
 // ── Load / Save from localStorage ─────────────────────────────────────────────
 export function loadSuppliers() {
   try {
     const saved = localStorage.getItem("jr_suppliers");
-    if (saved) return { ...DEFAULT_SUPPLIERS, ...JSON.parse(saved) };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Filter out any kitchen suppliers that leaked into frontend storage
+      const filtered = Object.fromEntries(
+        Object.entries(parsed).filter(([k]) => !KITCHEN_CATS.has(k))
+      );
+      return { ...DEFAULT_SUPPLIERS, ...filtered };
+    }
   } catch {}
   return { ...DEFAULT_SUPPLIERS };
 }

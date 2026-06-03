@@ -26,19 +26,23 @@ const MAX_HISTORY        = 14;
 const ITEMS_STORAGE_KEY  = "jr_items_v1";
 const KITEMS_STORAGE_KEY = "jr_items_kitchen_v1";
 
-// ── One-time cleanup: remove kitchen items from frontend storage ──────────────
+// ── One-time cleanup: remove kitchen items/suppliers from frontend storage ─────
 function cleanupMixedStorage() {
   try {
-    const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
-    if (!saved) return;
-    const parsed = JSON.parse(saved);
-    const hasKitchen = parsed.some(i => i.department === "kitchen");
-    if (hasKitchen) {
-      const cleaned = parsed.filter(i => !i.department || i.department === "frontend");
-      localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(cleaned));
-    }
-    // Also clean frontend suppliers that might have kitchen categories
     const kitchenCats = ["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"];
+
+    // Clean frontend items
+    const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      const hasKitchen = parsed.some(i => i.department === "kitchen");
+      if (hasKitchen) {
+        const cleaned = parsed.filter(i => !i.department || i.department === "frontend");
+        localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(cleaned));
+      }
+    }
+
+    // ALWAYS clean frontend suppliers — remove any kitchen categories
     const suppRaw = localStorage.getItem("jr_suppliers");
     if (suppRaw) {
       const supp = JSON.parse(suppRaw);
@@ -48,11 +52,23 @@ function cleanupMixedStorage() {
           Object.entries(supp).filter(([k]) => !kitchenCats.includes(k))
         );
         localStorage.setItem("jr_suppliers", JSON.stringify(cleaned));
+        console.log("Cleaned kitchen suppliers from frontend storage");
+      }
+    }
+
+    // Also clear kitchen items storage if it has frontend items mixed in
+    const kSaved = localStorage.getItem("jr_items_kitchen_v1");
+    if (kSaved) {
+      const kParsed = JSON.parse(kSaved);
+      const hasFrontend = kParsed.some(i => i.department === "frontend" || !i.department);
+      if (hasFrontend) {
+        const cleaned = kParsed.filter(i => i.department === "kitchen");
+        localStorage.setItem("jr_items_kitchen_v1", JSON.stringify(cleaned));
       }
     }
   } catch {}
 }
-cleanupMixedStorage(); // run once on load
+cleanupMixedStorage();
 function loadItems() {
   try {
     const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
