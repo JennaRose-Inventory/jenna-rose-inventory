@@ -199,6 +199,7 @@ export default function App() {
     setDept(d); setDeptState(d);
     setCounts({});
     setPage("Count");
+    todayDocIdRef.current = null; // reset so next save creates new record for new dept
   }
 
   // Refs to avoid stale closures
@@ -207,7 +208,12 @@ export default function App() {
 
   function setHistoryAndRef(docs) {
     const todayStr = new Date().toLocaleDateString("en-GB");
-    const todayDoc = docs.find(d => d.date === todayStr);
+    // Find today's doc matching current dept
+    const currentDept = getDept() || "frontend";
+    const todayDoc = docs.find(d =>
+      d.date === todayStr &&
+      (d.department === currentDept || (!d.department && currentDept === "frontend"))
+    );
     todayDocIdRef.current = todayDoc?.docId ?? null;
     setHistoryData(docs);
   }
@@ -291,11 +297,19 @@ export default function App() {
         const toDelete = snap.docs.slice(MAX_HISTORY);
         await Promise.all(toDelete.map((d) => deleteDoc(doc(db, "inventoryHistory", d.id))));
       }
-      // Single query after cleanup — fix #10 (was doing 2 queries)
       const finalSnap = snap.docs.length > MAX_HISTORY
         ? await getDocs(query(collection(db, "inventoryHistory"), orderBy("createdAt", "desc")))
         : snap;
-      setHistoryAndRef(finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id })));
+      const docs = finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id }));
+      // Update todayDocIdRef for current dept
+      const todayStr     = new Date().toLocaleDateString("en-GB");
+      const currentDept  = getDept() || "frontend";
+      const todayDoc     = docs.find(d =>
+        d.date === todayStr &&
+        (d.department === currentDept || (!d.department && currentDept === "frontend"))
+      );
+      todayDocIdRef.current = todayDoc?.docId ?? null;
+      setHistoryData(docs);
     } catch (err) { console.error(err); }
   }
 
@@ -416,10 +430,14 @@ export default function App() {
     );
   }
 
-  // Filter history by current department
-  const deptHistory = historyData.filter(r =>
-    !r.department || r.department === dept || (dept === "frontend" && !r.department)
-  );
+  // Filter history strictly by department
+  // frontend: records with department="frontend" OR old records with no department field
+  // kitchen: ONLY records with department="kitchen"
+  const deptHistory = historyData.filter(r => {
+    if (dept === "kitchen")  return r.department === "kitchen";
+    if (dept === "frontend") return r.department === "frontend" || !r.department;
+    return false;
+  });
 
   // Today's records filtered by dept
   const todayRecords = deptHistory.filter(r => r.date === todayDate);

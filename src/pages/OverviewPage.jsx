@@ -445,6 +445,10 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                                 ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
                                 : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
                             </span>
+                            {/* Restock date */}
+                            <span style={{ fontSize:"9px", color:"var(--text-faint)" }}>
+                              {freshMap[key] ? `(${freshMap[key]})` : ""}
+                            </span>
                             {/* Restock button */}
                             {onFreshDate && (
                               <button onClick={() => onFreshDate(item.category, item.name)} style={{
