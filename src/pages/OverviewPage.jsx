@@ -7,11 +7,11 @@ import { buildWhatsAppUrl } from "../utils/suppliers.js";
 // ── Build message with quantities ─────────────────────────────────────────────
 function buildMessageWithQty(category, selectedItems, qtys, lang) {
   const lines = selectedItems.map((name) => {
-    const qty = qtys[name] ? `${qtys[name]}x ` : "";
-    return `• ${qty}${name}`;
+    const qty = qtys[name] ? `${qtys[name]} ` : "";
+    return `${qty}${name}`;
   }).join("\n");
-  if (lang === "zh") return `你好，我想订以下货品：\n\n${lines}\n\n请确认，谢谢 🙏`;
-  return `Hi, I'd like to order the following:\n\n${lines}\n\nPlease confirm, thank you 🙏`;
+  if (lang === "zh") return `你好，我想订以下货品：\n${lines}\n请确认，谢谢 🙏`;
+  return `Hi, I'd like to order the following:\n${lines}\nPlease confirm, thank you 🙏`;
 }
 
 const WA_ICON = (
