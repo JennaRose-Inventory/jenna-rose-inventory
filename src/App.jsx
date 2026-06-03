@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
-  collection, addDoc, getDocs, getDoc, deleteDoc, updateDoc,
+  collection, addDoc, getDocs, getDoc, setDoc, deleteDoc, updateDoc,
   query, orderBy, doc,
 } from "firebase/firestore";
 
@@ -114,6 +114,7 @@ export default function App() {
   const [items, setItemsState]    = useState(() => loadItems());
   const [counts, setCounts]       = useState({});
   const [historyData, setHistoryData] = useState([]);
+  const [freshMap, setFreshMap]       = useState({});
   const [loading, setLoading]     = useState(true);
   const [toast, setToast]         = useState(null);
   const isOnline = useOnline();
@@ -203,6 +204,17 @@ export default function App() {
       }
     } catch {}
 
+    // Load fresh dates from Firestore
+    try {
+      const freshSnap = await getDocs(collection(db, "freshDates"));
+      const map = {};
+      freshSnap.docs.forEach(d => {
+        // doc ID uses __ instead of || (Firestore doesn't allow ||)
+        map[d.id.replace(/__/g, "||")] = d.data().date;
+      });
+      setFreshMap(map);
+    } catch {}
+
     setCounts({});
     setLoading(false);
     // Check order day low stock alerts after load
@@ -254,7 +266,18 @@ export default function App() {
     }
   }
 
-  async function saveInventory(selectedDay) {
+  async function saveFreshDate(category, name) {
+    const key     = `${category}__${name}`;
+    const dateStr = new Date().toLocaleDateString("en-GB");
+    try {
+      await setDoc(doc(db, "freshDates", key), { date: dateStr, category, name });
+      setFreshMap(prev => ({ ...prev, [`${category}||${name}`]: dateStr }));
+      showToast(t.appSub === "库存系统" ? `${name} 收货日已记录 ✓` : `${name} restock date saved ✓`, "success");
+    } catch (err) {
+      console.error("saveFreshDate error:", err);
+      showToast(t.appSub === "库存系统" ? "保存失败" : "Save failed", "error");
+    }
+  }
     if (!isOnline) {
       showToast(t.appSub === "库存系统" ? "无网络连接，无法保存" : "No internet connection", "error");
       return;
@@ -363,11 +386,11 @@ export default function App() {
       {/* Page content */}
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + 16px)`, overflowY:"auto" }}>
         {page === "Count"       && <CountPage       t={t} items={items} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={historyData} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={suppliers} />}
-        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} />}
+        {page === "Overview"    && <OverviewPage    t={t} historyData={historyData} suppliers={suppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={items} />}
         {page === "History"     && <HistoryPage     t={t} historyData={historyData} suppliers={suppliers} />}
         {page === "Dashboard"   && <DashboardPage   t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
         {page === "Predictions" && <PredictionsPage t={t} historyData={historyData} items={items} isLoading={loading} suppliers={suppliers} />}
-        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} />}
+        {page === "Manage"      && <ManagePage      t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={suppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} />}
       </div>
 
       {/* Bottom nav */}

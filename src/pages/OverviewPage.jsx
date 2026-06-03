@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Card, SectionLabel } from "../components/UI.jsx";
-import { shortDate, stockColor, isLowStock } from "../utils/helpers.js";
+import { shortDate, stockColor, isLowStock, daysSinceRestock, isFreshAlert } from "../utils/helpers.js";
 import { buildWhatsAppUrl } from "../utils/suppliers.js";
 
 // ── Build message with quantities ─────────────────────────────────────────────
@@ -242,9 +242,9 @@ function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
 }
 
 // ── Main Overview Page ────────────────────────────────────────────────────────
-export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord, onUpdateRecord }) {
-  const [orderModal, setOrderModal] = useState(null); // { category, latestMap }
-  const [editModal,  setEditModal]  = useState(null); // record object
+export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord, onUpdateRecord, freshMap = {}, onFreshDate, items = [] }) {
+  const [orderModal, setOrderModal] = useState(null);
+  const [editModal,  setEditModal]  = useState(null);
   const isZH = t.appSub === "库存系统";
 
   // Fix #6: historyData is sorted desc, so first occurrence = latest save per date
@@ -410,15 +410,74 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
 
             <Card>
               {grouped[category].map((item, idx) => {
-                const key = `${item.category}||${item.name}`;
-                const latestVal = recordMaps[0]?.[key];
-                const low = isLowStock({ stock: latestVal });
+                const key        = `${item.category}||${item.name}`;
+                const latestVal  = recordMaps[0]?.[key];
+                const low        = isLowStock({ stock: latestVal });
+                // Find item config for freshDays
+                const itemConfig = items.find(i => i.category === item.category && i.name === item.name);
+                const freshDays  = itemConfig?.freshDays ?? 0;
+                const daysOld    = freshDays > 0 ? daysSinceRestock(key, freshMap) : null;
+                const freshWarn  = freshDays > 0 && daysOld !== null && daysOld >= freshDays;
+                const hasLatestStock = latestVal !== undefined && latestVal !== "" && latestVal !== "0" && Number(latestVal) > 0;
+
                 return (
-                  <div key={idx} style={{ display:"flex", alignItems:"center", padding:"9px 14px", borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none", background:"transparent" }}>
-                    <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px", display:"flex", alignItems:"center", gap:"7px" }}>
-                      {low && <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--red-500)", flexShrink:0, display:"inline-block" }} />}
-                      {item.name}
-                    </div>
+                  <div key={idx} style={{ borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
+                    <div style={{ display:"flex", alignItems:"center", padding:"9px 14px", background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent" }}>
+                      <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
+                        {/* Item name row */}
+                        <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                          {low && <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--red-500)", flexShrink:0, display:"inline-block" }} />}
+                          {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
+                          {item.name}
+                        </div>
+                        {/* Freshness info row */}
+                        {freshDays > 0 && daysOld !== null && hasLatestStock && (
+                          <div style={{ marginTop:"3px", display:"flex", alignItems:"center", gap:"6px" }}>
+                            <span style={{
+                              fontSize:"10px", fontWeight:600,
+                              color: freshWarn ? "var(--amber-600)" : "var(--text-faint)",
+                              background: freshWarn ? "var(--amber-50)" : "var(--surface2)",
+                              border: `1px solid ${freshWarn ? "var(--amber-100)" : "var(--border)"}`,
+                              borderRadius: "var(--radius-full)",
+                              padding: "1px 7px",
+                            }}>
+                              {freshWarn
+                                ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
+                                : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
+                            </span>
+                            {/* Restock button */}
+                            {onFreshDate && (
+                              <button onClick={() => onFreshDate(item.category, item.name)} style={{
+                                fontSize:"9px", fontWeight:600,
+                                color: "var(--brand-mid)",
+                                background: "var(--brand-ghost)",
+                                border: "1px solid var(--brand-pale)",
+                                borderRadius: "var(--radius-full)",
+                                padding: "1px 8px",
+                                cursor: "pointer",
+                              }}>
+                                {isZH ? "收货" : "Restock"}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {/* First time restock button (no record yet) */}
+                        {freshDays > 0 && daysOld === null && hasLatestStock && onFreshDate && (
+                          <div style={{ marginTop:"3px" }}>
+                            <button onClick={() => onFreshDate(item.category, item.name)} style={{
+                              fontSize:"9px", fontWeight:600,
+                              color: "var(--text-muted)",
+                              background: "var(--surface2)",
+                              border: "1px solid var(--border)",
+                              borderRadius: "var(--radius-full)",
+                              padding: "1px 8px",
+                              cursor: "pointer",
+                            }}>
+                              {isZH ? "+ 记录收货日" : "+ Mark restock"}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     {dayRecords.map((_, i) => {
                       const val = recordMaps[i]?.[key];
                       const isNum = val !== undefined && val !== "" && !isNaN(Number(val));
@@ -438,6 +497,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                         </div>
                       );
                     })}
+                    </div>
                   </div>
                 );
               })}

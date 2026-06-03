@@ -60,6 +60,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
     newName:  firstActive?.name     ?? "",
     type:     firstActive?.type     ?? "quantity",
     lowStock: firstActive?.lowStock ?? "",
+    freshDays: firstActive?.freshDays ?? "",
   });
 
   // Add item state
@@ -83,7 +84,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
     }
     const updated = [...items];
     const origName = updated[idx]._origName ?? editItem.name;
-    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type, _origName: origName, lowStock: editItem.lowStock };
+    updated[idx] = { ...updated[idx], name: trimmedName, type: editItem.type, _origName: origName, lowStock: editItem.lowStock, freshDays: editItem.freshDays !== "" ? Number(editItem.freshDays) : 0 };
     setItems(updated);
     setEditItem(p => ({ ...p, name: trimmedName, newName: trimmedName }));
     onToast(isZH ? `"${trimmedName}" 已更新 ✓` : `"${trimmedName}" updated ✓`, "success");
@@ -138,7 +139,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
           <Select value={editItem.category} onChange={(e) => {
             const cat = e.target.value;
             const first = itemsInCat(cat)[0];
-            setEditItem({ category: cat, name: first?.name ?? "", newName: first?.name ?? "", type: first?.type ?? "quantity", lowStock: first?.lowStock ?? "" });
+            setEditItem({ category: cat, name: first?.name ?? "", newName: first?.name ?? "", type: first?.type ?? "quantity", lowStock: first?.lowStock ?? "", freshDays: first?.freshDays ?? "" });
           }}>
             {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
@@ -149,7 +150,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
           <Select value={editItem.name} onChange={(e) => {
             const name = e.target.value;
             const found = items.find((i) => i.category === editItem.category && i.name === name);
-            setEditItem(p => ({ ...p, name, newName: name, type: found?.type ?? "quantity", lowStock: found?.lowStock ?? "" }));
+            setEditItem(p => ({ ...p, name, newName: name, type: found?.type ?? "quantity", lowStock: found?.lowStock ?? "", freshDays: found?.freshDays ?? "" }));
           }}>
             {itemsInCat(editItem.category).map((i) => <option key={i.name} value={i.name}>{i.name}</option>)}
           </Select>
@@ -184,6 +185,22 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
             </div>
             <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
               {isZH ? "当数量 ≤ 此值时显示红色警告" : "Shows red warning when stock ≤ this value"}
+            </div>
+          </>
+        )}
+        {editItem.type === "quantity" && (
+          <>
+            <div style={L}>{isZH ? "新鲜天数（0 = 不追踪）" : "Fresh Days (0 = don't track)"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                type="number" inputMode="numeric"
+                placeholder={isZH ? "例：5（0 = 不追踪新鲜度）" : "e.g. 5 (0 = no tracking)"}
+                value={editItem.freshDays ?? ""}
+                onChange={(e) => setEditItem(p => ({ ...p, freshDays: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+              {isZH ? "收货后超过此天数会在 Overview 显示 🕐 警告" : "Shows 🕐 warning in Overview after this many days since restock"}
             </div>
           </>
         )}

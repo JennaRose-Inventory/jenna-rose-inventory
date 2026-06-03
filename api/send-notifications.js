@@ -127,6 +127,58 @@ export default async function handler(req, res) {
 
     if (alerts.length === 0) {
       console.log("[CRON] No low stock alerts today");
+    }
+
+    // ── Freshness alerts (RV Bakery + 千层蛋糕) ────────────────────────────────
+    const FRESH_CATEGORIES = ["RV Bakery", "千层蛋糕"];
+    try {
+      const freshSnap = await db.collection("freshDates").get();
+      const freshMap  = {};
+      freshSnap.docs.forEach(d => {
+        freshMap[d.id.replace(/__/g, "||")] = d.data().date;
+      });
+
+      const today     = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+      const staleItems = [];
+
+      latestItems.forEach(item => {
+        if (!FRESH_CATEGORIES.includes(item.category)) return;
+        if (item.active === false) return;
+        const freshDays = item.freshDays;
+        if (!freshDays || freshDays <= 0) return;
+        const stock = stockMap[`${item.category}||${item.name}`];
+        if (!stock || stock === "0" || Number(stock) <= 0) return;
+
+        const key     = `${item.category}||${item.name}`;
+        const dateStr = freshMap[key];
+        if (!dateStr) return;
+
+        const [dd, mm, yyyy] = dateStr.split("/").map(Number);
+        const restockDate    = new Date(yyyy, mm - 1, dd);
+        today.setHours(0,0,0,0);
+        const daysOld = Math.floor((today - restockDate) / 86400000);
+
+        if (daysOld >= freshDays) {
+          staleItems.push({ name: item.name, category: item.category, daysOld, stock });
+        }
+      });
+
+      if (staleItems.length > 0) {
+        const title = isZH ? "🕐 蛋糕新鲜度提醒" : "🕐 Freshness Alert";
+        const body  = staleItems.length === 1
+          ? (isZH
+              ? `${staleItems[0].name} 已放 ${staleItems[0].daysOld} 天，还有 ${staleItems[0].stock} 个，请处理！`
+              : `${staleItems[0].name} is ${staleItems[0].daysOld} days old with ${staleItems[0].stock} left — please handle!`)
+          : (isZH
+              ? `${staleItems.length} 个蛋糕已超过新鲜期：${staleItems.slice(0,3).map(i=>i.name).join("、")}${staleItems.length>3?"等":""}`
+              : `${staleItems.length} items past freshness date: ${staleItems.slice(0,3).map(i=>i.name).join(", ")}${staleItems.length>3?"...":""}`);
+        alerts.push({ title, body });
+      }
+    } catch (err) {
+      console.error("[CRON] Freshness check error:", err);
+    }
+
+    if (alerts.length === 0) {
       return res.status(200).json({ ok: true, sent: 0, reason: "no alerts" });
     }
 

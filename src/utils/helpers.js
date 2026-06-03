@@ -172,3 +172,25 @@ export function topCategories(historyData, topN = 6) {
     .slice(0, topN)
     .map(([name, count]) => ({ name, count }));
 }
+
+// ── Freshness tracking ────────────────────────────────────────────────────────
+// Returns days since last restock for an item, or null if no record
+export function daysSinceRestock(itemKey, freshMap) {
+  const dateStr = freshMap?.[itemKey];
+  if (!dateStr) return null;
+  const [dd, mm, yyyy] = dateStr.split("/").map(Number);
+  const restockDate = new Date(yyyy, mm - 1, dd);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.floor((today - restockDate) / 86400000);
+  return diff;
+}
+
+// Returns true if item needs freshness alert
+export function isFreshAlert(item, freshMap) {
+  const freshDays = item?.freshDays;
+  if (!freshDays || freshDays <= 0) return false;
+  const days = daysSinceRestock(`${item.category}||${item.name}`, freshMap);
+  if (days === null) return false; // never restocked = no alert
+  return days >= freshDays;
+}

@@ -2,28 +2,29 @@ export const itemsData = [
 
   // ══════════════════════════════════════════════════
   // RV BAKERY — Mon Tue Wed Thu Fri Sat Sun (all 7)
+  // freshDays: 5 = track freshness, 0 = no tracking
   // ══════════════════════════════════════════════════
-  { category:"RV Bakery", name:"New York",             type:"quantity", active:true, stock:10, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Ultimate",             type:"quantity", active:true, stock:3,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Lemon Yogurt Tart",    type:"quantity", active:true, stock:17, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Brownie",              type:"quantity", active:true, stock:12, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Tart",                 type:"quantity", active:true, stock:17, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Green Grapes",         type:"quantity", active:true, stock:7,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Earl Grey Lychee",     type:"quantity", active:true, stock:8,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Fruit Garden Pandan",  type:"quantity", active:true, stock:5,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"RV Bakery", name:"Mango Passion Oolong", type:"quantity", active:true, stock:2,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"New York",             type:"quantity", active:true, stock:10, freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Ultimate",             type:"quantity", active:true, stock:3,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Lemon Yogurt Tart",    type:"quantity", active:true, stock:17, freshDays:0, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Brownie",              type:"quantity", active:true, stock:12, freshDays:0, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Tart",                 type:"quantity", active:true, stock:17, freshDays:0, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Green Grapes",         type:"quantity", active:true, stock:7,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Earl Grey Lychee",     type:"quantity", active:true, stock:8,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Fruit Garden Pandan",  type:"quantity", active:true, stock:5,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"RV Bakery", name:"Mango Passion Oolong", type:"quantity", active:true, stock:2,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
 
   // ══════════════════════════════════════════════════
   // 千层蛋糕 — Mon Tue Wed Thu Fri Sat Sun (all 7)
   // ══════════════════════════════════════════════════
-  { category:"千层蛋糕", name:"Mix Fruits",             type:"quantity", active:true, stock:5,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Hazelnut Chocolate",     type:"quantity", active:true, stock:0,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Charcoal Yam",           type:"quantity", active:true, stock:3,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Burnt Cheese Brulee",    type:"quantity", active:true, stock:21, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Bobochacha",             type:"quantity", active:true, stock:0,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Strawberry Burnt Cheese",type:"quantity", active:true, stock:0,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Raspberry Matcha",       type:"quantity", active:true, stock:12, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
-  { category:"千层蛋糕", name:"Pistachio Yam",          type:"quantity", active:true, stock:9,  days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Mix Fruits",             type:"quantity", active:true, stock:5,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Hazelnut Chocolate",     type:"quantity", active:true, stock:0,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Charcoal Yam",           type:"quantity", active:true, stock:3,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Burnt Cheese Brulee",    type:"quantity", active:true, stock:21, freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Bobochacha",             type:"quantity", active:true, stock:0,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Strawberry Burnt Cheese",type:"quantity", active:true, stock:0,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Raspberry Matcha",       type:"quantity", active:true, stock:12, freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
+  { category:"千层蛋糕", name:"Pistachio Yam",          type:"quantity", active:true, stock:9,  freshDays:5, days:["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"] },
 
   // ══════════════════════════════════════════════════
   // 水果 — Mon Wed Fri
