@@ -65,6 +65,14 @@
   /* ── Layout ── */
   --nav-h: 64px;
   --top-h: 54px;
+
+/* Safe area support for iOS notch/dynamic island */
+@supports (padding-top: env(safe-area-inset-top)) {
+  :root {
+    --safe-top:    env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+  }
+}
 }
 
 /* ── Reset ── */

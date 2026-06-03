@@ -574,7 +574,7 @@ export default function App() {
       )}
 
       {/* Top header */}
-      <div style={{ position:"sticky", top:0, zIndex:200, background:"rgba(255,255,255,0.88)", backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", borderBottom:"1px solid var(--border)", padding:"0 16px", height:"var(--top-h)", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+      <div style={{ position:"sticky", top:0, zIndex:200, background:"rgba(255,255,255,0.88)", backdropFilter:"blur(16px)", WebkitBackdropFilter:"blur(16px)", borderBottom:"1px solid var(--border)", padding:"0 16px", paddingTop:"env(safe-area-inset-top)", height:"calc(var(--top-h) + env(safe-area-inset-top))", display:"flex", alignItems:"flex-end", justifyContent:"space-between", paddingBottom:"8px" }}>
         <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
           <div style={{ width:34, height:34, borderRadius:"10px", background: isKitchen ? "#2d5016" : "var(--brand)", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
             <span style={{ fontSize:"16px" }}>{isKitchen ? "🍳" : "☕"}</span>
@@ -616,7 +616,7 @@ export default function App() {
       </div>
 
       {/* Page content */}
-      <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + 16px)`, overflowY:"auto" }}>
+      <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
         {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
@@ -626,7 +626,7 @@ export default function App() {
       </div>
 
       {/* Bottom nav */}
-      <nav style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:"480px", height:"var(--nav-h)", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderTop:"1px solid var(--border)", display:"flex", zIndex:150, paddingBottom:"env(safe-area-inset-bottom)" }}>
+      <nav style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:"480px", height:"calc(var(--nav-h) + env(safe-area-inset-bottom))", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderTop:"1px solid var(--border)", display:"flex", zIndex:150, paddingBottom:"env(safe-area-inset-bottom)", alignItems:"flex-start" }}>
         {NAV.map(({ id, iconName, label }) => {
           const active = page === id;
           return (

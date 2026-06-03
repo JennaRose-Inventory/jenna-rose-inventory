@@ -39,7 +39,7 @@ function SaveSummaryModal({ summary, onClose, t }) {
   return createPortal(
     <>
       <div onClick={onClose} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998 }} />
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", background: "var(--surface)", borderRadius: "20px 20px 0 0", boxShadow: "0 -8px 32px rgba(0,0,0,0.15)", zIndex: 9999, maxHeight: "80dvh", display: "flex", flexDirection: "column", paddingBottom: "28px" }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", background: "var(--surface)", borderRadius: "20px 20px 0 0", boxShadow: "0 -8px 32px rgba(0,0,0,0.15)", zIndex: 9999, maxHeight: "80dvh", display: "flex", flexDirection: "column", paddingBottom: "calc(28px + env(safe-area-inset-bottom))" }}>
         <div style={{ display: "flex", justifyContent: "center", padding: "10px 0 4px" }}>
           <div style={{ width: 36, height: 4, borderRadius: 99, background: "var(--border2)" }} />
         </div>
@@ -373,7 +373,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
       )}
 
       {/* Sticky save button */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", padding: "12px 16px", background: "linear-gradient(to top, var(--bg) 70%, transparent)", zIndex: 100 }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", padding: "12px 16px", paddingBottom: "calc(12px + env(safe-area-inset-bottom))", background: "linear-gradient(to top, var(--bg) 70%, transparent)", zIndex: 100 }}>
         <button onClick={handleSave} disabled={saving || filledCount === 0} style={{
           width: "100%", padding: "14px", borderRadius: "var(--radius-lg)",
           background: saving ? "var(--brand-light)" : isWrongDay ? "var(--amber-600)" : "var(--brand)",
