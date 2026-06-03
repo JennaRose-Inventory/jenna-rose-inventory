@@ -278,6 +278,8 @@ export default function App() {
       showToast(t.appSub === "库存系统" ? "保存失败" : "Save failed", "error");
     }
   }
+
+  async function saveInventory(selectedDay) {
     if (!isOnline) {
       showToast(t.appSub === "库存系统" ? "无网络连接，无法保存" : "No internet connection", "error");
       return;
