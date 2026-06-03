@@ -295,24 +295,26 @@ export default function App() {
       setHistoryAndRef(loadedHistory);
     } catch { setHistoryData([]); }
 
-    // Load FRONTEND suppliers from Firestore (source of truth for frontend only)
-    // Kitchen suppliers stay in localStorage only
+    // Load FRONTEND suppliers from Firestore
     try {
       const suppSnap = await getDocs(collection(db, "config"));
       const suppDoc  = suppSnap.docs.find(d => d.id === "suppliers");
       if (suppDoc) {
         const raw = suppDoc.data();
-        // Strip meta fields (prefixed with _)
+        const kitchenCats = ["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"];
+        // Strip meta fields and kitchen categories
         const serverSuppliers = Object.fromEntries(
-          Object.entries(raw).filter(([k]) => !k.startsWith("_"))
+          Object.entries(raw).filter(([k]) => !k.startsWith("_") && !kitchenCats.includes(k))
         );
-        // Only apply if it looks like frontend suppliers (has known frontend categories)
-        const isFrontend = Object.keys(serverSuppliers).some(k =>
-          ["RV Bakery", "千层蛋糕", "Bo 8 Tea", "Yeli", "Global Coffee Resources",
-           "Fine Roastery", "Goldenlita", "TS Mart", "Thermalnator", "旺明",
-           "水果", "Kivory", "散货", "茶包", "H&S", "果汁", "Kombucha"].includes(k)
-        );
-        if (isFrontend && Object.keys(serverSuppliers).length > 0) {
+        // If Firestore had kitchen suppliers, delete the doc to force clean state
+        const hadKitchen = Object.keys(raw).some(k => kitchenCats.includes(k));
+        if (hadKitchen) {
+          // Delete corrupted doc
+          await deleteDoc(doc(db, "config", "suppliers"));
+          // Reset to defaults
+          saveSuppliers({});
+          setSuppliers(loadSuppliers());
+        } else if (Object.keys(serverSuppliers).length > 0) {
           saveSuppliers(serverSuppliers);
           setSuppliers(serverSuppliers);
         }

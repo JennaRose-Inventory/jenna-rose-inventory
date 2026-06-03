@@ -29,7 +29,12 @@ export function loadSuppliers() {
     const saved = localStorage.getItem("jr_suppliers");
     if (saved) {
       const parsed = JSON.parse(saved);
-      // Filter out any kitchen suppliers that leaked into frontend storage
+      // If kitchen suppliers detected, wipe and reset to defaults
+      const hasKitchen = Object.keys(parsed).some(k => KITCHEN_CATS.has(k));
+      if (hasKitchen) {
+        localStorage.removeItem("jr_suppliers");
+        return { ...DEFAULT_SUPPLIERS };
+      }
       const filtered = Object.fromEntries(
         Object.entries(parsed).filter(([k]) => !KITCHEN_CATS.has(k))
       );
