@@ -492,7 +492,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           </Select>
         </div>
 
-        <div style={L}>{isZH ? "下单日（Count 里显示的天数）" : "Count Days (when to count stock)"}</div>
+        <div style={L}>{isZH ? "点货日" : "Counting Days"}</div>
         <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
 
         <div style={L}>{isZH ? "下单提醒日（哪天要下单给 supplier）" : "Order Reminder Day (when to place order)"}</div>
@@ -580,7 +580,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           </Select>
         </div>
 
-        <div style={L}>{isZH ? "下单日（Count 显示）" : "Count Days"}</div>
+        <div style={L}>{isZH ? "点货日" : "Counting Days"}</div>
         <DayPicker value={newSupplier.days} onChange={(day) => toggleDay(day, setNewSupplier)} />
 
         <div style={L}>{isZH ? "下单提醒日" : "Order Reminder Day"}</div>
