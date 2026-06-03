@@ -26,14 +26,41 @@ const MAX_HISTORY        = 14;
 const ITEMS_STORAGE_KEY  = "jr_items_v1";
 const KITEMS_STORAGE_KEY = "jr_items_kitchen_v1";
 
-// ── Persist frontend items ────────────────────────────────────────────────────
+// ── One-time cleanup: remove kitchen items from frontend storage ──────────────
+function cleanupMixedStorage() {
+  try {
+    const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    const hasKitchen = parsed.some(i => i.department === "kitchen");
+    if (hasKitchen) {
+      const cleaned = parsed.filter(i => !i.department || i.department === "frontend");
+      localStorage.setItem(ITEMS_STORAGE_KEY, JSON.stringify(cleaned));
+    }
+    // Also clean frontend suppliers that might have kitchen categories
+    const kitchenCats = ["ITG","SE","GM","SFS","SHC","BIG J","AK","Seri Tanjung"];
+    const suppRaw = localStorage.getItem("jr_suppliers");
+    if (suppRaw) {
+      const supp = JSON.parse(suppRaw);
+      const hasMixed = Object.keys(supp).some(k => kitchenCats.includes(k));
+      if (hasMixed) {
+        const cleaned = Object.fromEntries(
+          Object.entries(supp).filter(([k]) => !kitchenCats.includes(k))
+        );
+        localStorage.setItem("jr_suppliers", JSON.stringify(cleaned));
+      }
+    }
+  } catch {}
+}
+cleanupMixedStorage(); // run once on load
 function loadItems() {
   try {
     const saved = localStorage.getItem(ITEMS_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
       const savedMap = {};
-      parsed.forEach(i => {
+      // Only frontend items (no department or department:frontend)
+      parsed.filter(i => !i.department || i.department === "frontend").forEach(i => {
         savedMap[`${i.category}||${i.name}`] = i;
         if (i._origName) savedMap[`${i.category}||${i._origName}`] = i;
       });
@@ -42,6 +69,7 @@ function loadItems() {
         return savedMap[key] ? { ...item, ...savedMap[key] } : item;
       });
       parsed.forEach(item => {
+        if (item.department === "kitchen") return; // skip kitchen items
         const key  = `${item.category}||${item.name}`;
         const orig = `${item.category}||${item._origName}`;
         const inBase = itemsData.find(i =>
