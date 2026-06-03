@@ -189,9 +189,10 @@ export default function App() {
   function handleUpdateSuppliers(updated) {
     if (isKitchen) {
       saveKitchenSuppliers(updated); setKSuppliers(updated);
+      // Kitchen suppliers stay local only — no Firestore sync needed
     } else {
       saveSuppliers(updated); setSuppliers(updated);
-      syncSuppliersToServer(updated);
+      syncSuppliersToServer(updated); // only frontend goes to Firestore
     }
   }
 
@@ -250,18 +251,27 @@ export default function App() {
       setHistoryAndRef(loadedHistory);
     } catch { setHistoryData([]); }
 
-    // Load suppliers from Firestore (source of truth) — sync across all devices
+    // Load FRONTEND suppliers from Firestore (source of truth for frontend only)
+    // Kitchen suppliers stay in localStorage only
     try {
       const suppSnap = await getDocs(collection(db, "config"));
       const suppDoc  = suppSnap.docs.find(d => d.id === "suppliers");
       if (suppDoc) {
         const raw = suppDoc.data();
-        // Strip meta fields (prefixed with _) before using as suppliers
+        // Strip meta fields (prefixed with _)
         const serverSuppliers = Object.fromEntries(
           Object.entries(raw).filter(([k]) => !k.startsWith("_"))
         );
-        saveSuppliers(serverSuppliers);
-        setSuppliers(serverSuppliers);
+        // Only apply if it looks like frontend suppliers (has known frontend categories)
+        const isFrontend = Object.keys(serverSuppliers).some(k =>
+          ["RV Bakery", "千层蛋糕", "Bo 8 Tea", "Yeli", "Global Coffee Resources",
+           "Fine Roastery", "Goldenlita", "TS Mart", "Thermalnator", "旺明",
+           "水果", "Kivory", "散货", "茶包", "H&S", "果汁", "Kombucha"].includes(k)
+        );
+        if (isFrontend && Object.keys(serverSuppliers).length > 0) {
+          saveSuppliers(serverSuppliers);
+          setSuppliers(serverSuppliers);
+        }
       }
     } catch {}
 
