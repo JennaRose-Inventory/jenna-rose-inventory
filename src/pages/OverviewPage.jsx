@@ -420,19 +420,14 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                   <div key={idx} style={{ borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
                     <div style={{
                       display:"flex", alignItems:"center", padding:"9px 14px",
-                      background: low
-                        ? "rgba(254,202,202,0.25)"
-                        : freshWarn
-                        ? "rgba(251,191,36,0.06)"
-                        : "transparent",
+                      background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent",
                     }}>
                       <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
-                        {/* Item name row */}
                         <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                          {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
                           {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
                           {item.name}
                         </div>
-                        {/* Freshness info — warning only */}
                         {freshDays > 0 && daysOld !== null && hasLatestStock && (
                           <div style={{ marginTop:"3px" }}>
                             <span style={{
@@ -451,17 +446,19 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                         )}
                       </div>
                     {dayRecords.map((_, i) => {
-                      const val = recordMaps[i]?.[key];
-                      const isNum = val !== undefined && val !== "" && !isNaN(Number(val));
+                      const val    = recordMaps[i]?.[key];
+                      const isNum  = val !== undefined && val !== "" && !isNaN(Number(val));
                       const isLatest = i === 0;
                       return (
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{
-                            fontSize: isLatest ? "13px" : "11px",
-                            fontWeight: isLatest ? 600 : 400,
+                            fontSize:   isLatest ? "13px" : "11px",
+                            fontWeight: isLatest && low ? 700 : isLatest ? 600 : 400,
                             fontFamily: isNum ? "var(--font-mono)" : "inherit",
-                            color: isLatest
-                              ? (low ? "var(--red-600)" : stockColor(val))
+                            color: isLatest && low
+                              ? "var(--red-600)"
+                              : isLatest
+                              ? stockColor(val)
                               : "var(--text-faint)",
                             opacity: isLatest ? 1 : 0.5,
                           }}>
