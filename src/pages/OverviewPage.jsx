@@ -279,17 +279,16 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return map;
   });
 
-  // Collect unique active items across all records, in category order
+  // Only show items from the LATEST record — older records just show historical values
+  // This prevents items that weren't counted today from appearing
   const seenKeys = new Set();
   const allItems = [];
-  dayRecords.forEach((rec) => {
-    (rec?.items ?? []).forEach((item) => {
-      const key = `${item.category}||${item.name}`;
-      if (!seenKeys.has(key) && item.active !== false) {
-        seenKeys.add(key);
-        allItems.push({ category: item.category, name: item.name });
-      }
-    });
+  (dayRecords[0]?.items ?? []).forEach((item) => {
+    const key = `${item.category}||${item.name}`;
+    if (!seenKeys.has(key) && item.active !== false) {
+      seenKeys.add(key);
+      allItems.push({ category: item.category, name: item.name });
+    }
   });
 
   const grouped = allItems.reduce((acc, item) => {
@@ -449,7 +448,8 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                       const val      = recordMaps[i]?.[key];
                       const isNum    = val !== undefined && val !== "" && !isNaN(Number(val));
                       const isLatest = i === 0;
-                      const color    = isLatest ? stockColor(val) : "var(--text-faint)";
+                      // Pass itemConfig so threshold is correct
+                      const color    = isLatest ? stockColor(val, itemConfig, suppliers) : "var(--text-faint)";
                       return (
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{
