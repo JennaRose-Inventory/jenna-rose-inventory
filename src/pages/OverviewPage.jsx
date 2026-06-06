@@ -247,20 +247,22 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
   const [editModal,  setEditModal]  = useState(null);
   const isZH = t.appSub === "库存系统";
 
-  // Fix #6: historyData is sorted desc, so first occurrence = latest save per date
+  // Show latest 3 records (regardless of date) — sorted desc, pick latest per date
   const dateMap = {};
   historyData.forEach((rec) => {
     if (!rec.date) return;
-    if (!dateMap[rec.date]) dateMap[rec.date] = rec; // first = latest
+    if (!dateMap[rec.date]) dateMap[rec.date] = rec; // first = latest per date
   });
 
-  // Get today and yesterday dates
-  const todayDate     = new Date().toLocaleDateString("en-GB");
-  const yesterdayDate = new Date(Date.now() - 86400000).toLocaleDateString("en-GB");
+  // Get latest 3 unique dates
+  const uniqueDates = Object.keys(dateMap).sort((a, b) => {
+    // Sort DD/MM/YYYY descending
+    const [da,ma,ya] = a.split("/").map(Number);
+    const [db,mb,yb] = b.split("/").map(Number);
+    return new Date(yb,mb-1,db) - new Date(ya,ma-1,da);
+  }).slice(0, 3);
 
-  const todayRec     = dateMap[todayDate]     ?? null;
-  const yesterdayRec = dateMap[yesterdayDate] ?? null;
-  const dayRecords   = [todayRec, yesterdayRec].filter(Boolean);
+  const dayRecords = uniqueDates.map(d => dateMap[d]);
 
   if (dayRecords.length === 0) {
     return (
@@ -277,7 +279,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return map;
   });
 
-  // Collect unique active items across both days, in category order
+  // Collect unique active items across all records, in category order
   const seenKeys = new Set();
   const allItems = [];
   dayRecords.forEach((rec) => {
@@ -296,7 +298,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return acc;
   }, {});
 
-  const colW = "52px";
+  const colW = "46px";
 
   function valDisplay(val) {
     if (val === undefined || val === null || val === "") return "—";
@@ -355,20 +357,14 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
               {shortDate(rec.date)}
             </div>
             <div style={{ fontSize:"9px", color: i === 0 ? "var(--brand-light)" : "var(--text-faint)", fontWeight:500 }}>
-              {i === 0 ? t.latest : t.yesterday}
+              {i === 0 ? t.latest : `D-${i}`}
             </div>
             {rec.savedBy && <div style={{ fontSize:"9px", color:"var(--text-faint)" }}>{rec.savedBy}</div>}
-            {/* Edit button — fix #12: larger tap target */}
             <button onClick={() => setEditModal(rec)} style={{
-              marginTop:"4px",
-              fontSize:"10px", fontWeight:600,
-              color:"var(--brand-mid)",
-              background:"var(--brand-ghost)",
-              border:"1px solid var(--brand-pale)",
-              borderRadius:"var(--radius-full)",
-              padding:"3px 10px",
-              cursor:"pointer",
-              display:"inline-block",
+              marginTop:"4px", fontSize:"10px", fontWeight:600,
+              color:"var(--brand-mid)", background:"var(--brand-ghost)",
+              border:"1px solid var(--brand-pale)", borderRadius:"var(--radius-full)",
+              padding:"3px 10px", cursor:"pointer", display:"inline-block",
             }}>
               {isZH ? "修改" : "edit"}
             </button>
@@ -401,7 +397,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                         cursor:"pointer", opacity: i === 1 ? 0.75 : 1,
                       }}>
                       {supplier.type === "copy" ? COPY_ICON : WA_ICON}
-                      {i === 0 ? (isZH ? "今天" : "Today") : (isZH ? "昨天" : "Yest.")}
+                      {i === 0 ? (isZH ? "今天" : "Latest") : `D-${i}`}
                     </button>
                   ))}
                 </div>
