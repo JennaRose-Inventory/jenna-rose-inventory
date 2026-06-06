@@ -7,7 +7,7 @@ import {
 import { db } from "./firebase.js";
 import { itemsData } from "./data/items.js";
 import { kitchenItemsData, kitchenSuppliersDefault } from "./data/kitchenItems.js";
-import { countKey } from "./utils/helpers.js";
+import { countKey, getAppDate, getAppDayIndex } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
 import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
 import { isOwner, getDept, setDept, deptLabel, loadKitchenSuppliers, saveKitchenSuppliers } from "./utils/department.js";
@@ -272,7 +272,7 @@ export default function App() {
   const todayDocIdRef    = useRef(null);
 
   function setHistoryAndRef(docs) {
-    const todayStr = new Date().toLocaleDateString("en-GB");
+    const todayStr = getAppDate();
     // Find today's doc matching current dept
     const currentDept = getDept() || "frontend";
     const todayDoc = docs.find(d =>
@@ -411,7 +411,7 @@ export default function App() {
         : snap;
       const docs = finalSnap.docs.map((d) => ({ ...d.data(), docId: d.id }));
       // Update todayDocIdRef for current dept
-      const todayStr     = new Date().toLocaleDateString("en-GB");
+      const todayStr     = getAppDate();
       const currentDept  = getDept() || "frontend";
       const todayDoc     = docs.find(d =>
         d.date === todayStr &&
@@ -446,7 +446,7 @@ export default function App() {
 
   async function saveFreshDate(category, name) {
     const key     = `${category}__${name}`;
-    const dateStr = new Date().toLocaleDateString("en-GB");
+    const dateStr = getAppDate();
     try {
       await setDoc(doc(db, "freshDates", key), { date: dateStr, category, name });
       setFreshMap(prev => ({ ...prev, [`${category}||${name}`]: dateStr }));
@@ -464,7 +464,7 @@ export default function App() {
     }
     try {
       const now      = new Date();
-      const todayStr = now.toLocaleDateString("en-GB");
+      const todayStr = getAppDate(); // use 6am boundary — before 6am = previous day
       const isZH     = t.appSub === "库存系统";
       const timeStr  = now.toLocaleTimeString("en-GB", { hour:"2-digit", minute:"2-digit" });
       const existingDocId = todayDocIdRef.current;
@@ -511,7 +511,7 @@ export default function App() {
   function showToast(message, type = "success") { setToast({ message, type, key: Date.now() }); }
   function handleCountChange(item, value) { setCounts((prev) => ({ ...prev, [countKey(item)]: value })); }
 
-  const todayDate    = new Date().toLocaleDateString("en-GB");
+  const todayDate    = getAppDate();
 
   if (!userName) return <NameSetup onDone={handleNameDone} t={t} lang={lang} onToggleLang={toggleLang} />;
 
