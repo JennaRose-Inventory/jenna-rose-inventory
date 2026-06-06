@@ -279,15 +279,19 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return map;
   });
 
-  // Only show items from latest record that have actual values (not empty)
+  // Show items scheduled for today's day of week (same as Count page)
+  // Values come from the latest record
+  const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+
   const seenKeys = new Set();
   const allItems = [];
-  (dayRecords[0]?.items ?? []).forEach((item) => {
-    const key   = `${item.category}||${item.name}`;
-    const stock = item.stock;
-    // Only include items that were actually filled in
-    const hasFilled = stock !== "" && stock !== null && stock !== undefined;
-    if (!seenKeys.has(key) && item.active !== false && hasFilled) {
+  // Use items prop (active items for current dept) filtered by today's day
+  const todayItems = items.filter(i =>
+    i.active !== false && (i.days ?? []).includes(todayDayEN)
+  );
+  todayItems.forEach((item) => {
+    const key = `${item.category}||${item.name}`;
+    if (!seenKeys.has(key)) {
       seenKeys.add(key);
       allItems.push({ category: item.category, name: item.name });
     }
