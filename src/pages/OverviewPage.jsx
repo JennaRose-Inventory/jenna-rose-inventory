@@ -280,20 +280,25 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
   });
 
   // ── Split items into today's and past ───────────────────────────────────────
-  const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+  // Use getAppDate logic — day starts at 6am
+  const appHour = new Date().getHours();
+  const appDay  = appHour < 6
+    ? new Date(Date.now() - 86400000).getDay()
+    : new Date().getDay();
+  const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][appDay];
 
-  // Today's items — scheduled for today
+  // Today's items — scheduled for today's day of week
   const todayItems = items.filter(i =>
     i.active !== false && (i.days ?? []).includes(todayDayEN)
   );
 
-  // Past items — appeared in D-1 or D-2 records but NOT scheduled for today
-  const todayKeys = new Set(todayItems.map(i => `${i.category}||${i.name}`));
-  const pastSeenKeys = new Set(todayKeys); // start with today's to avoid duplicates
-  const pastItems = [];
-  dayRecords.slice(1).forEach(rec => {
+  // Past items — appeared in ANY of the 3 records but NOT scheduled for today
+  const todayKeys   = new Set(todayItems.map(i => `${i.category}||${i.name}`));
+  const pastSeenKeys = new Set(todayKeys);
+  const pastItems   = [];
+  dayRecords.forEach(rec => {
     (rec?.items ?? []).forEach(item => {
-      const key = `${item.category}||${item.name}`;
+      const key   = `${item.category}||${item.name}`;
       const stock = item.stock;
       const hasFilled = stock !== "" && stock !== null && stock !== undefined;
       if (!pastSeenKeys.has(key) && item.active !== false && hasFilled) {
