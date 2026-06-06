@@ -55,9 +55,8 @@ export function stockColor(val, item, suppliers = {}) {
   const n = Number(val);
   if (!isNaN(n)) {
     const threshold = item ? getThreshold(item, suppliers) : 3;
-    if (n <= threshold)     return "var(--red-600)";
-    if (n <= threshold * 2) return "var(--amber-500)";
-    return "var(--green-600)";
+    if (n <= threshold) return "var(--red-600)";
+    return "var(--text-primary)"; // normal — just black
   }
   return "var(--text-secondary)";
 }
