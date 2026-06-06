@@ -300,7 +300,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     (rec?.items ?? []).forEach(item => {
       const key   = `${item.category}||${item.name}`;
       const stock = item.stock;
-      const hasFilled = stock !== "" && stock !== null && stock !== undefined;
+      const hasFilled = stock !== "" && stock !== null && stock !== undefined && stock !== "0" && Number(stock) !== 0;
       if (!pastSeenKeys.has(key) && item.active !== false && hasFilled) {
         pastSeenKeys.add(key);
         pastItems.push({ category: item.category, name: item.name });
