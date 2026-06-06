@@ -279,13 +279,15 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return map;
   });
 
-  // Only show items from the LATEST record — older records just show historical values
-  // This prevents items that weren't counted today from appearing
+  // Only show items from latest record that have actual values (not empty)
   const seenKeys = new Set();
   const allItems = [];
   (dayRecords[0]?.items ?? []).forEach((item) => {
-    const key = `${item.category}||${item.name}`;
-    if (!seenKeys.has(key) && item.active !== false) {
+    const key   = `${item.category}||${item.name}`;
+    const stock = item.stock;
+    // Only include items that were actually filled in
+    const hasFilled = stock !== "" && stock !== null && stock !== undefined;
+    if (!seenKeys.has(key) && item.active !== false && hasFilled) {
       seenKeys.add(key);
       allItems.push({ category: item.category, name: item.name });
     }
