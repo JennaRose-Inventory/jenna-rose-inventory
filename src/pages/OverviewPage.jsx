@@ -418,15 +418,21 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
 
                 return (
                   <div key={idx} style={{ borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
-                    <div style={{ display:"flex", alignItems:"center", padding:"9px 14px", background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent" }}>
+                    <div style={{
+                      display:"flex", alignItems:"center", padding:"9px 14px",
+                      background: low
+                        ? "rgba(254,202,202,0.25)"
+                        : freshWarn
+                        ? "rgba(251,191,36,0.06)"
+                        : "transparent",
+                    }}>
                       <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
                         {/* Item name row */}
                         <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
-                          {low && <span style={{ width:5, height:5, borderRadius:"50%", background:"var(--red-500)", flexShrink:0, display:"inline-block" }} />}
                           {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
                           {item.name}
                         </div>
-                        {/* Freshness info — warning only, no restock button */}
+                        {/* Freshness info — warning only */}
                         {freshDays > 0 && daysOld !== null && hasLatestStock && (
                           <div style={{ marginTop:"3px" }}>
                             <span style={{
@@ -448,18 +454,19 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                       const val = recordMaps[i]?.[key];
                       const isNum = val !== undefined && val !== "" && !isNaN(Number(val));
                       const isLatest = i === 0;
-                      const showPill = isLatest && low && valDisplay(val) !== "—";
                       return (
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          {showPill ? (
-                            <span style={{ display:"inline-flex", alignItems:"center", justifyContent:"center", minWidth:"32px", padding:"2px 8px", borderRadius:"var(--radius-full)", background:"var(--red-100)", border:"1px solid #fca5a5", fontSize:"12px", fontWeight:700, color:"var(--red-700)", fontFamily: isNum ? "var(--font-mono)" : "inherit" }}>
-                              {valDisplay(val)}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: isLatest ? "13px" : "11px", fontWeight: isLatest ? 600 : 400, fontFamily: isNum ? "var(--font-mono)" : "inherit", color: isLatest ? stockColor(val) : "var(--text-faint)", opacity: isLatest ? 1 : 0.5 }}>
-                              {valDisplay(val)}
-                            </span>
-                          )}
+                          <span style={{
+                            fontSize: isLatest ? "13px" : "11px",
+                            fontWeight: isLatest ? 600 : 400,
+                            fontFamily: isNum ? "var(--font-mono)" : "inherit",
+                            color: isLatest
+                              ? (low ? "var(--red-600)" : stockColor(val))
+                              : "var(--text-faint)",
+                            opacity: isLatest ? 1 : 0.5,
+                          }}>
+                            {valDisplay(val)}
+                          </span>
                         </div>
                       );
                     })}
