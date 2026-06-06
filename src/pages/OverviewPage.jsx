@@ -424,9 +424,9 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                     }}>
                       <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
                         <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
-                          {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
                           {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
                           {item.name}
+                          {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
                         </div>
                         {freshDays > 0 && daysOld !== null && hasLatestStock && (
                           <div style={{ marginTop:"3px" }}>
@@ -453,7 +453,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{
                             fontSize:   isLatest ? "13px" : "11px",
-                            fontWeight: isLatest && low ? 700 : isLatest ? 600 : 400,
+                            fontWeight: isLatest ? 600 : 400,
                             fontFamily: isNum ? "var(--font-mono)" : "inherit",
                             color: isLatest && low
                               ? "var(--red-600)"
