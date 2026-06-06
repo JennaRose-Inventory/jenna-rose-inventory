@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { createPortal } from "react-dom";
 import { SectionLabel, Spinner } from "../components/UI.jsx";
-import { countKey, isLowStock } from "../utils/helpers.js";
+import { countKey, isLowStock, getAppDayIndex } from "../utils/helpers.js";
 
 const STATUS_CATEGORIES = ["TS Mart", "Thermalnator", "旺明"];
 const EN_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
@@ -111,7 +111,7 @@ function DaySwitchWarning({ onConfirm, onCancel, t }) {
 
 // ── Main CountPage ────────────────────────────────────────────────────────────
 export default function CountPage({ t, items, counts, onCountChange, onSave, onClearCounts, historyData = [], todayRecord, todayCount = 0, suppliers = {}, freshMap = {}, onFreshDate }) {
-  const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+  const todayIdx = getAppDayIndex();
   const [selectedDay, setSelectedDay] = useState(EN_DAYS[todayIdx]);
   const [saving, setSaving]           = useState(false);
   const [summary, setSummary]         = useState(null);

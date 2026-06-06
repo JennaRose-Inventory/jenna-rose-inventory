@@ -1,6 +1,29 @@
 // ── Key helpers ──────────────────────────────────────────────────────────────
 export const countKey = (item) => `${item.category}||${item.name}`;
 
+// ── App date — day starts at 6am, not midnight ────────────────────────────────
+// If current time is before 6am, treat as previous day
+// This gives buffer for late night operations (e.g. 12am-6am still = yesterday)
+export function getAppDate() {
+  const now = new Date();
+  if (now.getHours() < 6) {
+    // Before 6am — treat as yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    return yesterday.toLocaleDateString("en-GB");
+  }
+  return now.toLocaleDateString("en-GB");
+}
+
+// App day index (0=Mon ... 6=Sun) — also adjusted for 6am boundary
+export function getAppDayIndex() {
+  const now = new Date();
+  const d = now.getHours() < 6
+    ? new Date(now.getTime() - 86400000)
+    : now;
+  return d.getDay() === 0 ? 6 : d.getDay() - 1;
+}
+
 // ── Get effective low stock threshold for an item ─────────────────────────────
 // Priority: item.lowStock → suppliers[category].lowStock → default 3
 export function getThreshold(item, suppliers = {}) {
