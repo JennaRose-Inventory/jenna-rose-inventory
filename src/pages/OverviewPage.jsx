@@ -445,21 +445,18 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                           </div>
                         )}
                       </div>
-                    {dayRecords.map((_, i) => {
-                      const val    = recordMaps[i]?.[key];
-                      const isNum  = val !== undefined && val !== "" && !isNaN(Number(val));
+                      {dayRecords.map((_, i) => {
+                      const val      = recordMaps[i]?.[key];
+                      const isNum    = val !== undefined && val !== "" && !isNaN(Number(val));
                       const isLatest = i === 0;
+                      const color    = isLatest ? stockColor(val) : "var(--text-faint)";
                       return (
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{
                             fontSize:   isLatest ? "13px" : "11px",
                             fontWeight: isLatest ? 600 : 400,
                             fontFamily: isNum ? "var(--font-mono)" : "inherit",
-                            color: isLatest && low
-                              ? "var(--red-600)"
-                              : isLatest
-                              ? stockColor(val)
-                              : "var(--text-faint)",
+                            color,
                             opacity: isLatest ? 1 : 0.5,
                           }}>
                             {valDisplay(val)}
