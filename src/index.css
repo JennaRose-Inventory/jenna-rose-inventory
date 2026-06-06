@@ -21,16 +21,19 @@
 
   /* ── Semantic colors ── */
   --green-700:  #1a5c3a;
+  --green-600:  #2d9058;
   --green-500:  #2d9058;
   --green-100:  #d4edde;
   --green-50:   #eef7f2;
 
   --red-700:    #991b1b;
+  --red-600:    #dc2626;
   --red-500:    #dc2626;
   --red-100:    #fee2e2;
   --red-50:     #fef9f9;
 
   --amber-600:  #c2620a;
+  --amber-500:  #d97706;
   --amber-100:  #fde8c8;
   --amber-50:   #fffbf5;
 
