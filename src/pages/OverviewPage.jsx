@@ -279,29 +279,40 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     return map;
   });
 
-  // Show items scheduled for today's day of week (same as Count page)
-  // Values come from the latest record
+  // ── Split items into today's and past ───────────────────────────────────────
   const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
 
-  const seenKeys = new Set();
-  const allItems = [];
-  // Use items prop (active items for current dept) filtered by today's day
+  // Today's items — scheduled for today
   const todayItems = items.filter(i =>
     i.active !== false && (i.days ?? []).includes(todayDayEN)
   );
-  todayItems.forEach((item) => {
-    const key = `${item.category}||${item.name}`;
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      allItems.push({ category: item.category, name: item.name });
-    }
+
+  // Past items — appeared in D-1 or D-2 records but NOT scheduled for today
+  const todayKeys = new Set(todayItems.map(i => `${i.category}||${i.name}`));
+  const pastSeenKeys = new Set(todayKeys); // start with today's to avoid duplicates
+  const pastItems = [];
+  dayRecords.slice(1).forEach(rec => {
+    (rec?.items ?? []).forEach(item => {
+      const key = `${item.category}||${item.name}`;
+      const stock = item.stock;
+      const hasFilled = stock !== "" && stock !== null && stock !== undefined;
+      if (!pastSeenKeys.has(key) && item.active !== false && hasFilled) {
+        pastSeenKeys.add(key);
+        pastItems.push({ category: item.category, name: item.name });
+      }
+    });
   });
 
-  const grouped = allItems.reduce((acc, item) => {
-    if (!acc[item.category]) acc[item.category] = [];
-    acc[item.category].push(item);
-    return acc;
-  }, {});
+  function buildGrouped(itemList) {
+    return itemList.reduce((acc, item) => {
+      if (!acc[item.category]) acc[item.category] = [];
+      acc[item.category].push(item);
+      return acc;
+    }, {});
+  }
+
+  const todayGrouped = buildGrouped(todayItems);
+  const pastGrouped  = buildGrouped(pastItems);
 
   const colW = "46px";
 
@@ -314,7 +325,97 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
 
   const lowCount = Object.values(recordMaps[0] ?? {}).filter(v => isLowStock({ stock: v })).length;
 
-  const orderModalItems = orderModal ? (grouped[orderModal.category] ?? []) : [];
+  const orderModalItems = orderModal
+    ? ([...Object.values(todayGrouped), ...Object.values(pastGrouped)].flat().filter(i => i.category === orderModal.category))
+    : [];
+
+  function renderGroups(groupedItems) {
+    return Object.keys(groupedItems).map((category) => {
+      const supplier = suppliers?.[category] ?? null;
+      return (
+        <div key={category} style={{ marginBottom:"16px" }}>
+          <div style={{ display:"flex", alignItems:"center", padding:"0 2px", marginBottom:"6px" }}>
+            <span style={{ flex:1, fontSize:"10.5px", fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"var(--text-faint)" }}>
+              {category}
+            </span>
+            {supplier && (
+              <div style={{ display:"flex", gap:"5px" }}>
+                {dayRecords.map((rec, i) => (
+                  <button key={i}
+                    onClick={() => setOrderModal({ category, latestMap: recordMaps[i] })}
+                    style={{
+                      display:"flex", alignItems:"center", gap:"4px",
+                      padding:"3px 9px", borderRadius:99,
+                      background: supplier.type === "copy" ? "var(--surface2)" : i === 0 ? "#f0faf4" : "#f5f5f5",
+                      border: `1px solid ${supplier.type === "copy" ? "var(--border)" : i === 0 ? "#a7d7b8" : "#d4d4d4"}`,
+                      fontSize:"10px", fontWeight:600,
+                      color: supplier.type === "copy" ? "var(--text-secondary)" : i === 0 ? "#1a7f37" : "#666",
+                      cursor:"pointer", opacity: i === 1 ? 0.75 : 1,
+                    }}>
+                    {supplier.type === "copy" ? COPY_ICON : WA_ICON}
+                    {i === 0 ? (isZH ? "今天" : "Latest") : `D-${i}`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <Card>
+            {groupedItems[category].map((item, idx) => {
+              const key        = `${item.category}||${item.name}`;
+              const latestVal  = recordMaps[0]?.[key];
+              const low        = isLowStock({ stock: latestVal });
+              const itemConfig = items.find(i => i.category === item.category && i.name === item.name);
+              const freshDays  = itemConfig?.freshDays ?? 0;
+              const daysOld    = freshDays > 0 ? daysSinceRestock(key, freshMap) : null;
+              const freshWarn  = freshDays > 0 && daysOld !== null && daysOld >= freshDays;
+              const hasLatestStock = latestVal !== undefined && latestVal !== "" && latestVal !== "0" && Number(latestVal) > 0;
+              return (
+                <div key={idx} style={{ borderBottom: idx < groupedItems[category].length - 1 ? "1px solid var(--border)" : "none" }}>
+                  <div style={{ display:"flex", alignItems:"center", padding:"9px 14px", background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent" }}>
+                    <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+                        {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
+                        {item.name}
+                        {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
+                      </div>
+                      {freshDays > 0 && daysOld !== null && hasLatestStock && (
+                        <div style={{ marginTop:"3px" }}>
+                          <span style={{
+                            fontSize:"10px", fontWeight:600,
+                            color: freshWarn ? "var(--amber-600)" : "var(--text-faint)",
+                            background: freshWarn ? "var(--amber-50)" : "var(--surface2)",
+                            border: `1px solid ${freshWarn ? "var(--amber-100)" : "var(--border)"}`,
+                            borderRadius: "var(--radius-full)", padding: "1px 7px",
+                          }}>
+                            {freshWarn
+                              ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
+                              : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    {dayRecords.map((_, i) => {
+                      const val      = recordMaps[i]?.[key];
+                      const isNum    = val !== undefined && val !== "" && !isNaN(Number(val));
+                      const isLatest = i === 0;
+                      const color    = isLatest ? stockColor(val, itemConfig, suppliers) : "var(--text-faint)";
+                      return (
+                        <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                          <span style={{ fontSize: isLatest ? "13px" : "11px", fontWeight: isLatest ? 600 : 400, fontFamily: isNum ? "var(--font-mono)" : "inherit", color, opacity: isLatest ? 1 : 0.5 }}>
+                            {valDisplay(val)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+        </div>
+      );
+    });
+  }
 
   return (
     <div className="page-enter">
@@ -377,107 +478,22 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
         ))}
       </div>
 
-      {/* Category rows */}
-      {Object.keys(grouped).map((category) => {
-        const supplier = suppliers?.[category] ?? null;
-        return (
-          <div key={category} style={{ marginBottom:"16px" }}>
-            {/* Category label + order buttons */}
-            <div style={{ display:"flex", alignItems:"center", padding:"0 2px", marginBottom:"6px" }}>
-              <span style={{ flex:1, fontSize:"10.5px", fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"var(--text-faint)" }}>
-                {category}
-              </span>
-              {supplier && (
-                <div style={{ display:"flex", gap:"5px" }}>
-                  {dayRecords.map((rec, i) => (
-                    <button key={i}
-                      onClick={() => setOrderModal({ category, latestMap: recordMaps[i] })}
-                      style={{
-                        display:"flex", alignItems:"center", gap:"4px",
-                        padding:"3px 9px", borderRadius:99,
-                        background: supplier.type === "copy" ? "var(--surface2)" : i === 0 ? "#f0faf4" : "#f5f5f5",
-                        border: `1px solid ${supplier.type === "copy" ? "var(--border)" : i === 0 ? "#a7d7b8" : "#d4d4d4"}`,
-                        fontSize:"10px", fontWeight:600,
-                        color: supplier.type === "copy" ? "var(--text-secondary)" : i === 0 ? "#1a7f37" : "#666",
-                        cursor:"pointer", opacity: i === 1 ? 0.75 : 1,
-                      }}>
-                      {supplier.type === "copy" ? COPY_ICON : WA_ICON}
-                      {i === 0 ? (isZH ? "今天" : "Latest") : `D-${i}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+      {/* Today's items */}
+      {renderGroups(todayGrouped)}
 
-            <Card>
-              {grouped[category].map((item, idx) => {
-                const key        = `${item.category}||${item.name}`;
-                const latestVal  = recordMaps[0]?.[key];
-                const low        = isLowStock({ stock: latestVal });
-                // Find item config for freshDays
-                const itemConfig = items.find(i => i.category === item.category && i.name === item.name);
-                const freshDays  = itemConfig?.freshDays ?? 0;
-                const daysOld    = freshDays > 0 ? daysSinceRestock(key, freshMap) : null;
-                const freshWarn  = freshDays > 0 && daysOld !== null && daysOld >= freshDays;
-                const hasLatestStock = latestVal !== undefined && latestVal !== "" && latestVal !== "0" && Number(latestVal) > 0;
-
-                return (
-                  <div key={idx} style={{ borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
-                    <div style={{
-                      display:"flex", alignItems:"center", padding:"9px 14px",
-                      background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent",
-                    }}>
-                      <div style={{ flex:1, fontSize:"12px", color:"var(--text-primary)", paddingRight:"6px" }}>
-                        <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
-                          {freshWarn && <span style={{ fontSize:"11px", lineHeight:1 }}>🕐</span>}
-                          {item.name}
-                          {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
-                        </div>
-                        {freshDays > 0 && daysOld !== null && hasLatestStock && (
-                          <div style={{ marginTop:"3px" }}>
-                            <span style={{
-                              fontSize:"10px", fontWeight:600,
-                              color: freshWarn ? "var(--amber-600)" : "var(--text-faint)",
-                              background: freshWarn ? "var(--amber-50)" : "var(--surface2)",
-                              border: `1px solid ${freshWarn ? "var(--amber-100)" : "var(--border)"}`,
-                              borderRadius: "var(--radius-full)",
-                              padding: "1px 7px",
-                            }}>
-                              {freshWarn
-                                ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
-                                : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                      {dayRecords.map((_, i) => {
-                      const val      = recordMaps[i]?.[key];
-                      const isNum    = val !== undefined && val !== "" && !isNaN(Number(val));
-                      const isLatest = i === 0;
-                      // Pass itemConfig so threshold is correct
-                      const color    = isLatest ? stockColor(val, itemConfig, suppliers) : "var(--text-faint)";
-                      return (
-                        <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          <span style={{
-                            fontSize:   isLatest ? "13px" : "11px",
-                            fontWeight: isLatest ? 600 : 400,
-                            fontFamily: isNum ? "var(--font-mono)" : "inherit",
-                            color,
-                            opacity: isLatest ? 1 : 0.5,
-                          }}>
-                            {valDisplay(val)}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    </div>
-                  </div>
-                );
-              })}
-            </Card>
+      {/* Past items separator + groups */}
+      {Object.keys(pastGrouped).length > 0 && (
+        <>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"8px 2px 12px" }}>
+            <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
+            <span style={{ fontSize:"10px", color:"var(--text-faint)", fontWeight:500, whiteSpace:"nowrap" }}>
+              {isZH ? "过去点货" : "Previous days"}
+            </span>
+            <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
           </div>
-        );
-      })}
+          {renderGroups(pastGrouped)}
+        </>
+      )}
     </div>
   );
 }
