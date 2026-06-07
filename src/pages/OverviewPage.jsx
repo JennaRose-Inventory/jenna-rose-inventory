@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Card, SectionLabel } from "../components/UI.jsx";
-import { shortDate, stockColor, isLowStock, daysSinceRestock, isFreshAlert } from "../utils/helpers.js";
+import { shortDate, stockColor, isLowStock, daysSinceRestock, isFreshAlert, getAppDate } from "../utils/helpers.js";
 import { buildWhatsAppUrl } from "../utils/suppliers.js";
 
 // ── Build message with quantities ─────────────────────────────────────────────
@@ -394,7 +394,25 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                           }}>
                             {freshWarn
                               ? (isZH ? `已放 ${daysOld} 天 ⚠️` : `${daysOld}d old ⚠️`)
-                              : (isZH ? `收货 ${daysOld} 天前` : `${daysOld}d since restock`)}
+                              : (() => {
+                                  // Format restock date with 6am buffer awareness
+                                  const restockDateStr = freshMap[key];
+                                  if (!restockDateStr) return "";
+                                  const [dd, mm] = restockDateStr.split("/");
+                                  const appToday = getAppDate();
+                                  const [tdd, tmm] = appToday.split("/");
+                                  if (dd === tdd && mm === tmm) {
+                                    return isZH ? "今天收货" : "Restocked today";
+                                  }
+                                  // Check if yesterday (app date - 1)
+                                  const appYest = new Date(new Date().setDate(new Date().getDate() - (new Date().getHours() < 6 ? 2 : 1)));
+                                  const yDD = String(appYest.getDate()).padStart(2,"0");
+                                  const yMM = String(appYest.getMonth()+1).padStart(2,"0");
+                                  if (dd === yDD && mm === yMM) {
+                                    return isZH ? "昨天收货" : "Restocked yesterday";
+                                  }
+                                  return isZH ? `收货 ${dd}/${mm}` : `Restocked ${dd}/${mm}`;
+                                })()}
                           </span>
                         </div>
                       )}
