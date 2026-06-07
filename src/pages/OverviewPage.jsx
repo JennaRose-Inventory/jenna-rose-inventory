@@ -280,12 +280,11 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
   });
 
   // ── Split items into today's and past ───────────────────────────────────────
-  // Use getAppDate logic — day starts at 6am
-  const appHour = new Date().getHours();
-  const appDay  = appHour < 6
-    ? new Date(Date.now() - 86400000).getDay()
-    : new Date().getDay();
-  const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][appDay];
+  // Use app date boundary (6am) — consistent with Count page and saveInventory
+  const appDate    = getAppDate(); // DD/MM/YYYY
+  const [appDD, appMM, appYYYY] = appDate.split("/").map(Number);
+  const appDateObj = new Date(appYYYY, appMM - 1, appDD);
+  const todayDayEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][appDateObj.getDay()];
 
   // Today's items — scheduled for today's day of week
   const todayItems = items.filter(i =>
@@ -300,8 +299,13 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     (rec?.items ?? []).forEach(item => {
       const key   = `${item.category}||${item.name}`;
       const stock = item.stock;
-      const hasFilled = stock !== "" && stock !== null && stock !== undefined && stock !== "0" && Number(stock) !== 0;
-      if (!pastSeenKeys.has(key) && item.active !== false && hasFilled) {
+      const hasFilled = stock !== "" && stock !== null && stock !== undefined;
+      // For past items: if stock is 0, only include if the item was scheduled
+      // (to avoid showing items that were just saved empty along with other records)
+      const itemScheduled = (item.days ?? []).length > 0;
+      const stockNum = Number(stock);
+      const worthShowing = hasFilled && (stockNum !== 0 || itemScheduled);
+      if (!pastSeenKeys.has(key) && item.active !== false && worthShowing) {
         pastSeenKeys.add(key);
         pastItems.push({ category: item.category, name: item.name });
       }
