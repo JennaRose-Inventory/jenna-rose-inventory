@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   collection, addDoc, getDocs, getDoc, setDoc, deleteDoc, updateDoc,
-  query, orderBy, doc,
+  query, orderBy, doc, where,
 } from "firebase/firestore";
 
 import { db } from "./firebase.js";
@@ -11,9 +11,11 @@ import { countKey, getAppDate, getAppDayIndex } from "./utils/helpers.js";
 import { STRINGS } from "./utils/lang.js";
 import { loadSuppliers, saveSuppliers } from "./utils/suppliers.js";
 import { isOwner, getDept, setDept, deptLabel, loadKitchenSuppliers, saveKitchenSuppliers } from "./utils/department.js";
+import { getStoredAuth, setStoredAuth, clearStoredAuth, isAdmin } from "./utils/auth.js";
 import { Icon } from "./components/UI.jsx";
 import { checkOrderDayAlerts, syncSuppliersToServer } from "./utils/notifications.js";
 import Toast from "./components/Toast.jsx";
+import LoginPage from "./pages/LoginPage.jsx";
 
 import CountPage       from "./pages/CountPage.jsx";
 import OverviewPage    from "./pages/OverviewPage.jsx";
@@ -181,8 +183,8 @@ function NameSetup({ onDone, t, lang, onToggleLang }) {
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [lang, setLang]               = useState(() => localStorage.getItem("jr_lang") || "en");
-  const [userName, setUserName]       = useState(() => localStorage.getItem("jr_user") || "");
-  const [dept, setDeptState]          = useState(() => getDept()); // null = not chosen yet
+  const [auth, setAuth]               = useState(() => getStoredAuth());
+  const [dept, setDeptState]          = useState(() => getDept());
   // Frontend state
   const [suppliers, setSuppliers]     = useState(() => loadSuppliers());
   const [items, setItemsState]        = useState(() => loadItems());
@@ -194,12 +196,14 @@ export default function App() {
   const [counts, setCounts]           = useState({});
   const [historyData, setHistoryData] = useState([]);
   const [freshMap, setFreshMap]       = useState({});
-  const [loading, setLoading]     = useState(true);
-  const [toast, setToast]         = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [toast, setToast]             = useState(null);
   const isOnline = useOnline();
-  const t = STRINGS[lang];
-  const owner     = isOwner(userName);
-  const isKitchen = dept === "kitchen";
+  const t        = STRINGS[lang];
+
+  const userName   = auth?.name ?? "";
+  const owner      = isAdmin(auth?.username ?? "");
+  const isKitchen  = dept === "kitchen";
 
   // Active department data
   const activeItems     = isKitchen ? kItems     : items;
@@ -290,7 +294,31 @@ export default function App() {
     localStorage.setItem("jr_lang", next);
     syncSuppliersToServer(activeSuppliers);
   }
-  function handleNameDone(name) { localStorage.setItem("jr_user", name); setUserName(name); }
+  function handleLogin(staffData) {
+    setStoredAuth(staffData);
+    setAuth(staffData);
+    localStorage.setItem("jr_user", staffData.name);
+    // Auto-set dept for non-admin staff
+    if (!isAdmin(staffData.username) && staffData.dept) {
+      setDept(staffData.dept);
+      setDeptState(staffData.dept);
+    }
+  }
+
+  function handleLogout() {
+    clearStoredAuth();
+    setAuth(null);
+    setDeptState(null);
+    setCounts({});
+  }
+
+  function handleNameDone(name) {
+    if (auth) {
+      setStoredAuth({ ...auth, name });
+      setAuth(p => ({ ...p, name }));
+    }
+    localStorage.setItem("jr_user", name);
+  }
 
   useEffect(() => { loadAll(); }, []);
 
@@ -513,7 +541,7 @@ export default function App() {
 
   const todayDate    = getAppDate();
 
-  if (!userName) return <NameSetup onDone={handleNameDone} t={t} lang={lang} onToggleLang={toggleLang} />;
+  if (!auth) return <LoginPage onLogin={handleLogin} lang={lang} onToggleLang={toggleLang} />;
 
   // After name, owner can always see dept select, others only if no dept set yet
   if (!dept) {
@@ -622,7 +650,7 @@ export default function App() {
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
         {page === "Dashboard"   && <DashboardPage   t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
         {page === "Predictions" && <PredictionsPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
-        {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={(n) => { localStorage.setItem("jr_user", n); setUserName(n); }} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} />}
+        {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} />}
       </div>
 
       {/* Bottom nav */}

@@ -1,6 +1,9 @@
 import { useState } from "react";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { db } from "../firebase.js";
 import { Card, SectionLabel, Select, Input, PrimaryBtn } from "../components/UI.jsx";
 import { validateContact } from "../utils/suppliers.js";
+import StaffPageComponent from "./StaffPage.jsx";
 
 const EN_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
@@ -723,13 +726,14 @@ function AccountSection({ t, userName, onChangeName, onToast }) {
   );
 }
 
-// ── Main ManagePage — Items first, Suppliers second, Account third ─────────────
-export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName, suppliers, onUpdateSuppliers }) {
+// ── Main ManagePage ────────────────────────────────────────────────────────────
+export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName, suppliers, onUpdateSuppliers, freshMap, isAdmin = false, onLogout }) {
   const isZH = t.appSub === "库存系统";
   const TABS = [
     { id: "items",    label: isZH ? "项目"   : "Items"     },
     { id: "supplier", label: isZH ? "供应商" : "Suppliers" },
     { id: "account",  label: isZH ? "账户"   : "Account"   },
+    ...(isAdmin ? [{ id: "staff", label: isZH ? "员工" : "Staff" }] : []),
   ];
   const [activeTab, setActiveTab] = useState("items");
 
@@ -763,6 +767,18 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast,
         <>
           <SectionLabel>👤 {isZH ? "账户设置" : "Account"}</SectionLabel>
           <AccountSection t={t} userName={userName} onChangeName={onChangeName} onToast={onToast} />
+          {/* Logout */}
+          <div style={{ marginTop:"16px" }}>
+            <button onClick={onLogout} style={{ width:"100%", padding:"12px", borderRadius:"var(--radius-md)", background:"var(--red-50)", color:"var(--red-600)", border:"1px solid var(--red-100)", fontSize:"13px", fontWeight:600, cursor:"pointer" }}>
+              {isZH ? "退出登入" : "Sign Out"}
+            </button>
+          </div>
+        </>
+      )}
+      {activeTab === "staff" && isAdmin && (
+        <>
+          <SectionLabel>👥 {isZH ? "员工管理" : "Staff"}</SectionLabel>
+          <StaffPageComponent t={t} onToast={onToast} />
         </>
       )}
     </div>
