@@ -95,7 +95,9 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
     if (items.find((i) => i.category === newItem.category && i.name === newItem.name.trim())) {
       onToast(t.alreadyExists, "error"); return;
     }
-    setItems([...items, { ...newItem, name: newItem.name.trim(), stock: "", active: true, days: EN_DAYS }]);
+    // Use supplier's days, fall back to all days if supplier not found
+    const supplierDays = suppliers?.[newItem.category]?.days ?? EN_DAYS;
+    setItems([...items, { ...newItem, name: newItem.name.trim(), stock: "", active: true, days: supplierDays }]);
     setNewItem((p) => ({ ...p, name: "", lowStock: "" }));
     onToast(t.addedOk(newItem.name), "success");
   }
