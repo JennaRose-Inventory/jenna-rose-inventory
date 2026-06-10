@@ -2,7 +2,7 @@
 // Web Push via VAPID — works on Android + iPhone PWA (iOS 16.4+)
 // Background notifications via Vercel Cron + web-push
 
-const VAPID_PUBLIC_KEY = "BBD1RaeX5BupDCdRxNG_Cg92ovjS4VyeSdUn1o8G5SMxQ79euHYr436zon0cN4xJ_uPmcCRhsxMtsLuX8S3WPzg";
+const VAPID_PUBLIC_KEY = "BBFKXwfAHVagTmkBC-HWhSi3oPrjZ3VomufXIwa37IW57WVYd9SSGfwCfipBUKLPTPRfPi68oIYdFqALZ8OSnBg";
 const NOTIF_KEY        = "jr_notif_enabled";
 const DEVICE_ID_KEY    = "jr_device_id";
 const NOTIF_SENT_KEY   = "jr_notif_sent";
