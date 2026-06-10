@@ -16,13 +16,15 @@ import { Icon } from "./components/UI.jsx";
 import { checkOrderDayAlerts, syncSuppliersToServer } from "./utils/notifications.js";
 import Toast from "./components/Toast.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-
 import CountPage       from "./pages/CountPage.jsx";
 import OverviewPage    from "./pages/OverviewPage.jsx";
 import HistoryPage     from "./pages/HistoryPage.jsx";
 import DashboardPage   from "./pages/DashboardPage.jsx";
 import PredictionsPage from "./pages/PredictionsPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
+import SchedulePage    from "./pages/SchedulePage.jsx";
+import DebugPage       from "./pages/DebugPage.jsx";
+import { registerPushFunction } from "./services/notificationService.js";
 
 const MAX_HISTORY        = 14;
 const ITEMS_STORAGE_KEY  = "jr_items_v1";
@@ -215,13 +217,14 @@ export default function App() {
   ])];
 
   const NAV = [
-    { id:"Count",       iconName:"count",    label:t.navCount    },
-    { id:"Overview",    iconName:"overview", label:t.navOverview },
-    { id:"History",     iconName:"history",  label:t.navHistory  },
-    { id:"Dashboard",   iconName:"stats",    label:t.navStats    },
-    { id:"Predictions", iconName:"ai",       label:t.navAI       },
-    { id:"Manage",      iconName:"manage",   label:t.navManage   },
-  ];
+    { id:"Count",        iconName:"count",    label:t.navCount,                                          depts:["frontend","kitchen"] },
+    { id:"Overview",     iconName:"overview", label:t.navOverview,                                       depts:["frontend","kitchen"] },
+    { id:"History",      iconName:"history",  label:t.navHistory,                                        depts:["frontend","kitchen"] },
+    { id:"Dashboard",    iconName:"stats",    label:t.navStats,                                          depts:["frontend","kitchen"] },
+    { id:"Predictions",  iconName:"ai",       label:t.navAI,                                             depts:["frontend","kitchen"] },
+    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "预定" : "Schedule",      depts:["frontend"] },
+    { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
+  ].filter(n => n.depts.includes(dept || "frontend"));
 
   // setItems wrappers — route to correct department + sync to Firestore
   function setItems(updated) {
@@ -650,7 +653,9 @@ export default function App() {
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
         {page === "Dashboard"   && <DashboardPage   t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
         {page === "Predictions" && <PredictionsPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
-        {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} />}
+        {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
+        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} />}
+        {page === "Debug"        && owner      && <DebugPage />}
       </div>
 
       {/* Bottom nav */}

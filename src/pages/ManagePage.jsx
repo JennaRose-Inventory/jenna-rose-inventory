@@ -727,7 +727,7 @@ function AccountSection({ t, userName, onChangeName, onToast }) {
 }
 
 // ── Main ManagePage ────────────────────────────────────────────────────────────
-export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName, suppliers, onUpdateSuppliers, freshMap, isAdmin = false, onLogout }) {
+export default function ManagePage({ t, items, setItems, allCategories, onToast, userName, onChangeName, suppliers, onUpdateSuppliers, freshMap, isAdmin = false, onLogout, onSetPage }) {
   const isZH = t.appSub === "库存系统";
   const TABS = [
     { id: "items",    label: isZH ? "项目"   : "Items"     },
@@ -773,6 +773,14 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast,
               {isZH ? "退出登入" : "Sign Out"}
             </button>
           </div>
+          {/* Debug — Admin only */}
+          {isAdmin && (
+            <div style={{ marginTop:"10px" }}>
+              <button onClick={() => onSetPage?.("Debug")} style={{ width:"100%", padding:"10px", borderRadius:"var(--radius-md)", background:"var(--surface2)", color:"var(--text-faint)", border:"1px dashed var(--border)", fontSize:"12px", fontWeight:500, cursor:"pointer", letterSpacing:"0.01em" }}>
+                🛠 {isZH ? "开发调试" : "Debug Tools"}
+              </button>
+            </div>
+          )}
         </>
       )}
       {activeTab === "staff" && isAdmin && (
