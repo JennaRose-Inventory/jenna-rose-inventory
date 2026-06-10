@@ -7,10 +7,6 @@
     {
       "path": "/api/send-notifications",
       "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/check-notifications",
-      "schedule": "0 * * * *"
     }
   ]
 }
