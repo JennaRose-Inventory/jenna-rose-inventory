@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/check-notifications",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
