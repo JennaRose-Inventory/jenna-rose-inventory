@@ -150,10 +150,6 @@ export default function HistoryPage({ t, historyData, freshMap = {} }) {
                         fontSize:"12px", fontWeight:700,
                         fontFamily:"var(--font-mono)",
                         color,
-                        background: low ? "var(--red-100)" : "transparent",
-                        padding: low ? "2px 8px" : "0",
-                        borderRadius: low ? "var(--radius-full)" : "0",
-                        border: low ? "1px solid #fca5a5" : "none",
                       }}>
                         {label}
                       </div>
