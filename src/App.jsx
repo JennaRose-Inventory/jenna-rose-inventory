@@ -19,8 +19,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import CountPage       from "./pages/CountPage.jsx";
 import OverviewPage    from "./pages/OverviewPage.jsx";
 import HistoryPage     from "./pages/HistoryPage.jsx";
-import DashboardPage   from "./pages/DashboardPage.jsx";
-import PredictionsPage from "./pages/PredictionsPage.jsx";
+import NewDashboardPage from "./pages/NewDashboardPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
 import SchedulePage    from "./pages/SchedulePage.jsx";
 import DebugPage       from "./pages/DebugPage.jsx";
@@ -220,8 +219,7 @@ export default function App() {
     { id:"Count",        iconName:"count",    label:t.navCount,                                          depts:["frontend","kitchen"] },
     { id:"Overview",     iconName:"overview", label:t.navOverview,                                       depts:["frontend","kitchen"] },
     { id:"History",      iconName:"history",  label:t.navHistory,                                        depts:["frontend","kitchen"] },
-    { id:"Dashboard",    iconName:"stats",    label:t.navStats,                                          depts:["frontend","kitchen"] },
-    { id:"Predictions",  iconName:"ai",       label:t.navAI,                                             depts:["frontend","kitchen"] },
+    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "仪表盘" : "Dashboard",   depts:["frontend","kitchen"] },
     { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "预定" : "Schedule",      depts:["frontend"] },
     { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
   ].filter(n => n.depts.includes(dept || "frontend"));
@@ -651,8 +649,7 @@ export default function App() {
         {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
-        {page === "Dashboard"   && <DashboardPage   t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
-        {page === "Predictions" && <PredictionsPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} suppliers={activeSuppliers} />}
+        {page === "Dashboard"   && <NewDashboardPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} />}
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
         {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} />}
         {page === "Debug"        && owner      && <DebugPage />}
