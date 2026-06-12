@@ -291,6 +291,9 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     i.active !== false && (i.days ?? []).includes(todayDayEN)
   );
 
+  // Build a set of active item keys from current items config
+  const activeItemKeys = new Set(items.filter(i => i.active !== false).map(i => `${i.category}||${i.name}`));
+
   // Past items — appeared in ANY of the 3 records but NOT scheduled for today
   const todayKeys   = new Set(todayItems.map(i => `${i.category}||${i.name}`));
   const pastSeenKeys = new Set(todayKeys);
@@ -300,12 +303,11 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
       const key   = `${item.category}||${item.name}`;
       const stock = item.stock;
       const hasFilled = stock !== "" && stock !== null && stock !== undefined;
-      // For past items: if stock is 0, only include if the item was scheduled
-      // (to avoid showing items that were just saved empty along with other records)
       const itemScheduled = (item.days ?? []).length > 0;
       const stockNum = Number(stock);
       const worthShowing = hasFilled && (stockNum !== 0 || itemScheduled);
-      if (!pastSeenKeys.has(key) && item.active !== false && worthShowing) {
+      // Check active status from current items config (not history snapshot)
+      if (!pastSeenKeys.has(key) && activeItemKeys.has(key) && worthShowing) {
         pastSeenKeys.add(key);
         pastItems.push({ category: item.category, name: item.name });
       }
