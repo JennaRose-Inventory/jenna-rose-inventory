@@ -5,10 +5,6 @@ const webpush = require("web-push");
 
 initializeApp();
 
-// ── VAPID keys — 从你的 Vercel 环境变量复制过来 ────────────────────────────────
-// 运行前先设置: firebase functions:secrets:set VAPID_PUBLIC_KEY
-//                              firebase functions:secrets:set VAPID_PRIVATE_KEY
-
 function fmt12h(time24) {
   if (!time24) return "";
   const [h, m] = time24.split(":").map(Number);
@@ -26,49 +22,61 @@ exports.checkNotifications = onSchedule(
   async (event) => {
     const db = getFirestore();
 
-    // Setup web push
     webpush.setVapidDetails(
       "mailto:jenna.rose.inventory@gmail.com",
       process.env.VAPID_PUBLIC_KEY,
       process.env.VAPID_PRIVATE_KEY
     );
 
-    const now  = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
-    const soon = new Date(now.getTime() + 30 * 60 * 1000);
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kuala_Lumpur" }));
+
+    // 时间窗口
+    const in30min  = new Date(now.getTime() + 30 * 60 * 1000);
+    const in60min  = new Date(now.getTime() + 60 * 60 * 1000);
+    const in65min  = new Date(now.getTime() + 65 * 60 * 1000); // 1小时窗口上限
 
     console.log(`[CHECK-NOTIF] Running at ${now.toLocaleTimeString("en-MY")}`);
 
     const alerts = [];
 
-    // ── 1. 预订提醒 ────────────────────────────────────────────────────────────
+    // ── 预订提醒 ───────────────────────────────────────────────────────────────
     try {
       const resSnap = await db.collection("reservations")
         .where("notified", "==", false)
         .get();
 
-      const pendingRes = resSnap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        .filter(r => {
-          if (r.status === "cancelled" || r.status === "completed") return false;
-          const dt = new Date(`${r.reservationDate}T${r.reservationTime}`);
-          return dt >= now && dt <= soon;
-        });
+      const allRes = resSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      console.log(`[CHECK-NOTIF] Reservations pending: ${pendingRes.length}`);
+      for (const r of allRes) {
+        if (r.status === "cancelled" || r.status === "completed") continue;
+        const dt = new Date(`${r.reservationDate}T${r.reservationTime}`);
 
-      for (const r of pendingRes) {
-        alerts.push({
-          title: "📋 即将到来的预订",
-          body:  `${r.customerName} · ${r.pax} 人 · ${fmt12h(r.reservationTime)}`,
-          tag:   `res-${r.id}`,
-          postSend: () => db.collection("reservations").doc(r.id).update({ notified: true }),
-        });
+        // 30分钟前提醒
+        if (dt >= now && dt <= in30min) {
+          alerts.push({
+            title: "📋 预订即将开始",
+            body:  `${r.customerName} · ${r.pax} 人 · ${fmt12h(r.reservationTime)} — 30分钟后`,
+            tag:   `res-30-${r.id}`,
+            postSend: () => db.collection("reservations").doc(r.id).update({ notified: true }),
+          });
+        }
+        // 1小时前提醒 (用 notified1h 字段追踪)
+        else if (dt >= in60min && dt <= in65min && !r.notified1h) {
+          alerts.push({
+            title: "📋 预订提醒",
+            body:  `${r.customerName} · ${r.pax} 人 · ${fmt12h(r.reservationTime)} — 1小时后`,
+            tag:   `res-60-${r.id}`,
+            postSend: () => db.collection("reservations").doc(r.id).update({ notified1h: true }),
+          });
+        }
       }
+
+      console.log(`[CHECK-NOTIF] Reservations alerts: ${alerts.length}`);
     } catch (err) {
       console.error("[CHECK-NOTIF] Reservations error:", err);
     }
 
-    // ── 2. 提醒到期 ────────────────────────────────────────────────────────────
+    // ── 提醒到期 ───────────────────────────────────────────────────────────────
     try {
       const nowTimestamp = Timestamp.fromDate(now);
       const remSnap = await db.collection("reminders")
