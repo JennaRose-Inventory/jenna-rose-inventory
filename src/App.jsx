@@ -475,9 +475,9 @@ export default function App() {
     }
   }
 
-  async function saveFreshDate(category, name) {
+  async function saveFreshDate(category, name, customDate) {
     const key     = `${category}__${name}`;
-    const dateStr = getAppDate();
+    const dateStr = customDate || getAppDate();
     try {
       await setDoc(doc(db, "freshDates", key), { date: dateStr, category, name });
       setFreshMap(prev => ({ ...prev, [`${category}||${name}`]: dateStr }));
