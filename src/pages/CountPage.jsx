@@ -320,7 +320,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
               const freshDays = item.freshDays ?? 0;
               const restockDate = freshDays > 0 ? freshMap[key] : null;
               return (
-                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "11px 14px", borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
+                <div key={idx} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "13px 14px", borderBottom: idx < grouped[category].length - 1 ? "1px solid var(--border)" : "none" }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: "13px", color: "var(--text-primary)" }}>{item.name}</div>
                     {hasLast && (
@@ -353,14 +353,52 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
                   {type === "status" ? (
                     <StatusToggle value={val} onChange={(v) => onCountChange(item, v)} t={t} />
                   ) : (
-                    <input
-                      ref={(el) => { inputRefs.current[key] = el; }}
-                      type="number" inputMode="numeric"
-                      value={val} placeholder=""
-                      onChange={(e) => onCountChange(item, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(e, item)}
-                      style={{ width: "64px", padding: "6px 8px", textAlign: "center", borderRadius: "var(--radius-sm)", border: `1.5px solid ${val !== "" ? "var(--brand-light)" : "var(--border)"}`, fontSize: "14px", fontWeight: 600, background: "var(--surface2)", color: "var(--text-primary)" }}
-                    />
+                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <button
+                        onClick={() => {
+                          const n = Number(val);
+                          if (!isNaN(n) && n > 0) onCountChange(item, String(n - 1));
+                          else if (val === "") onCountChange(item, "0");
+                        }}
+                        style={{
+                          width: 32, height: 36, borderRadius: "var(--radius-sm)",
+                          border: "1.5px solid var(--border)", background: "var(--surface2)",
+                          fontSize: 18, fontWeight: 500, color: "var(--text-muted)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", flexShrink: 0, lineHeight: 1,
+                        }}
+                      >−</button>
+                      <input
+                        ref={(el) => { inputRefs.current[key] = el; }}
+                        type="number" inputMode="numeric"
+                        value={val} placeholder="—"
+                        onChange={(e) => onCountChange(item, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(e, item)}
+                        style={{
+                          width: 52, height: 36,
+                          padding: "0 4px", textAlign: "center",
+                          borderRadius: "var(--radius-sm)",
+                          border: `1.5px solid ${val !== "" ? "var(--brand-light)" : "var(--border)"}`,
+                          fontSize: 16, fontWeight: 700,
+                          background: val !== "" ? "var(--brand-ghost)" : "var(--surface2)",
+                          color: "var(--text-primary)",
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          const n = Number(val);
+                          if (!isNaN(n)) onCountChange(item, String(n + 1));
+                          else onCountChange(item, "1");
+                        }}
+                        style={{
+                          width: 32, height: 36, borderRadius: "var(--radius-sm)",
+                          border: "1.5px solid var(--brand-pale)", background: "var(--brand-ghost)",
+                          fontSize: 18, fontWeight: 500, color: "var(--brand-mid)",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          cursor: "pointer", flexShrink: 0, lineHeight: 1,
+                        }}
+                      >+</button>
+                    </div>
                   )}
                 </div>
               );
