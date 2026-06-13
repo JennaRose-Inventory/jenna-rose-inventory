@@ -78,6 +78,58 @@
 }
 }
 
+/* ── Dark mode ── */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:        #1a1410;
+    --bg2:       #221c17;
+    --surface:   #2a221c;
+    --surface2:  #312820;
+    --surface3:  #3a2e25;
+
+    --border:    #3d3028;
+    --border2:   #4a3a2e;
+
+    --brand:       #c8855a;
+    --brand-soft:  #d4966e;
+    --brand-mid:   #c8855a;
+    --brand-light: #d4966e;
+    --brand-pale:  #4a2e1a;
+    --brand-ghost: #2e1e12;
+
+    --green-700:  #4ade80;
+    --green-600:  #4ade80;
+    --green-500:  #4ade80;
+    --green-100:  #14532d;
+    --green-50:   #0f2e1a;
+
+    --red-700:    #f87171;
+    --red-600:    #f87171;
+    --red-500:    #f87171;
+    --red-100:    #7f1d1d;
+    --red-50:     #3d0f0f;
+
+    --amber-600:  #fbbf24;
+    --amber-500:  #fbbf24;
+    --amber-100:  #78350f;
+    --amber-50:   #3d1c06;
+
+    --blue-600:   #60a5fa;
+    --blue-100:   #1e3a5f;
+    --blue-50:    #0f1f33;
+
+    --text-primary:   #f0ebe6;
+    --text-secondary: #c4b5a8;
+    --text-muted:     #8a7a6e;
+    --text-faint:     #5a4e46;
+
+    --shadow-xs:  0 1px 2px rgba(0,0,0,0.3);
+    --shadow-sm:  0 1px 4px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2);
+    --shadow-md:  0 4px 16px rgba(0,0,0,0.4), 0 1px 4px rgba(0,0,0,0.25);
+    --shadow-lg:  0 12px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  }
+}
+
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; font-size: 16px; }
@@ -153,3 +205,23 @@ input[type=number] { font-variant-numeric: slashed-zero tabular-nums; }
 
 /* ── Selection ── */
 ::selection { background: var(--brand-pale); color: var(--brand); }
+
+/* ── Dark mode glass surfaces ── */
+@media (prefers-color-scheme: dark) {
+  /* Override any hardcoded white backgrounds in inline styles */
+  .dark-glass {
+    background: rgba(42, 34, 28, 0.92) !important;
+  }
+}
+
+/* ── Input dark mode ── */
+@media (prefers-color-scheme: dark) {
+  input, select, textarea {
+    color-scheme: dark;
+  }
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    color-scheme: dark;
+  }
+}
