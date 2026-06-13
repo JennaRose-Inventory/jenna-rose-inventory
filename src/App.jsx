@@ -194,7 +194,7 @@ export default function App() {
   const [kItems, setKItemsState]      = useState(() => loadKitchenItems());
   // Shared state
   const [page, setPage]               = useState("Count");
-  const [slideDir, setSlideDir]       = useState("right"); // "right" | "left"
+  const [slideDir, setSlideDir]       = useState("right");
   const [animKey, setAnimKey]         = useState(0);
   const [counts, setCounts]           = useState({});
   const [historyData, setHistoryData] = useState([]);
@@ -226,7 +226,6 @@ export default function App() {
     { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
   ].filter(n => n.depts.includes(dept || "frontend"));
 
-  // Navigate with direction — right = forward, left = back
   function navigateTo(id) {
     const navIds = NAV.map(n => n.id);
     const from = navIds.indexOf(page);
@@ -657,7 +656,8 @@ export default function App() {
       </div>
 
       {/* Page content */}
-      <div key={animKey} className={slideDir === "right" ? "page-slide-right" : "page-slide-left"} style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
+      <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
+        <div key={animKey} className={slideDir === "right" ? "page-slide-right" : "page-slide-left"}>
         {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
@@ -665,6 +665,7 @@ export default function App() {
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
         {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} />}
         {page === "Debug"        && owner      && <DebugPage />}
+        </div>
       </div>
 
       {/* Bottom nav */}
