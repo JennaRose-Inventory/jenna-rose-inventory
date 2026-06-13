@@ -194,6 +194,8 @@ export default function App() {
   const [kItems, setKItemsState]      = useState(() => loadKitchenItems());
   // Shared state
   const [page, setPage]               = useState("Count");
+  const [slideDir, setSlideDir]       = useState("right"); // "right" | "left"
+  const [animKey, setAnimKey]         = useState(0);
   const [counts, setCounts]           = useState({});
   const [historyData, setHistoryData] = useState([]);
   const [freshMap, setFreshMap]       = useState({});
@@ -223,6 +225,16 @@ export default function App() {
     { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "预定" : "Schedule",      depts:["frontend"] },
     { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
   ].filter(n => n.depts.includes(dept || "frontend"));
+
+  // Navigate with direction — right = forward, left = back
+  function navigateTo(id) {
+    const navIds = NAV.map(n => n.id);
+    const from = navIds.indexOf(page);
+    const to   = navIds.indexOf(id);
+    setSlideDir(to >= from ? "right" : "left");
+    setAnimKey(k => k + 1);
+    setPage(id);
+  }
 
   // setItems wrappers — route to correct department + sync to Firestore
   function setItems(updated) {
@@ -645,7 +657,7 @@ export default function App() {
       </div>
 
       {/* Page content */}
-      <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
+      <div key={animKey} className={slideDir === "right" ? "page-slide-right" : "page-slide-left"} style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
         {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
         {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
@@ -660,7 +672,7 @@ export default function App() {
         {NAV.map(({ id, iconName, label }) => {
           const active = page === id;
           return (
-            <button key={id} onClick={() => setPage(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"4px", background:"none", border:"none", color: active ? "var(--brand)" : "var(--text-faint)", fontSize:"9.5px", fontWeight: active ? 600 : 400, letterSpacing:"0.02em", position:"relative", transition:"color 0.15s", paddingTop:"2px" }}>
+            <button key={id} onClick={() => navigateTo(id)} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:"4px", background:"none", border:"none", color: active ? "var(--brand)" : "var(--text-faint)", fontSize:"9.5px", fontWeight: active ? 600 : 400, letterSpacing:"0.02em", position:"relative", transition:"color 0.15s", paddingTop:"2px" }}>
               {active && <div style={{ position:"absolute", top:0, left:"28%", right:"28%", height:"2px", background:"var(--brand)", borderRadius:"0 0 2px 2px" }} />}
               <div style={{ padding:"5px 10px", borderRadius:"var(--radius-sm)", background: active ? "var(--brand-ghost)" : "transparent", transition:"background 0.15s", display:"flex", alignItems:"center", justifyContent:"center" }}>
                 <Icon name={iconName} size={19} color={active ? "var(--brand)" : "var(--text-faint)"} strokeWidth={active ? 2 : 1.5} />

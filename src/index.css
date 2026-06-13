@@ -225,3 +225,20 @@ input[type=number] { font-variant-numeric: slashed-zero tabular-nums; }
     color-scheme: dark;
   }
 }
+
+/* ── Page slide transitions ── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-22px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.page-slide-right {
+  animation: slideInRight 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.page-slide-left {
+  animation: slideInLeft 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
