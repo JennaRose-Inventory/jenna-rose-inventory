@@ -35,7 +35,7 @@ function friendlyCountdownEN(mins) {
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const R = { pill:"#FCEBEB", text:"#A32D2D" };
-const A = { pill:"#FAEEDA", text:"#854F0B" };
+const A = { pill:"var(--amber-50)", text:"#854F0B" };
 const G = { pill:"#E1F5EE", text:"#0F6E56" };
 const B = { pill:"#E6F1FB", text:"#185FA5" };
 
@@ -73,7 +73,7 @@ function Modal({ title, onClose, children }) {
       <div onClick={e=>e.stopPropagation()} style={{ background:"var(--surface,#fff)", width:"100%", maxWidth:520, borderRadius:"16px 16px 0 0", padding:"20px 0 32px", maxHeight:"80vh", overflowY:"auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"0 18px 14px", borderBottom:"0.5px solid var(--border,#eee)" }}>
           <span style={{ fontWeight:600, fontSize:16, color:"var(--text-primary,#111)" }}>{title}</span>
-          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888", lineHeight:1 }}>×</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"var(--text-muted)", lineHeight:1 }}>×</button>
         </div>
         {children}
       </div>
@@ -233,7 +233,7 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
         )}
         {urgentItems.length>0&&<Divider label={isZH?"🚨 紧急":"🚨 Urgent"} />}
         {visibleAttention.filter(i=>urgentItems.find(u=>u.name===i.name)).map((item,i)=>(
-          <Row key={i} bg="#fff5f5">
+          <Row key={i} bg="var(--red-50)">
             <Dot color="#E24B4A" />
             <div style={{flex:1}}>
               <div style={{fontSize:13,fontWeight:500,color:"var(--text-primary,#111)"}}>{item.name}</div>
@@ -259,7 +259,7 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
         ))}
         {hasMore&&(
           <div style={{padding:"8px 14px",borderTop:"0.5px solid var(--border,#eee)"}}>
-            <button onClick={()=>setShowAllAttention(v=>!v)} style={{fontSize:11,color:"#185FA5",background:"none",border:"none",cursor:"pointer",padding:0}}>
+            <button onClick={()=>setShowAllAttention(v=>!v)} style={{fontSize:11,color:"var(--blue-600)",background:"none",border:"none",cursor:"pointer",padding:0}}>
               {showAllAttention?(isZH?"收起 ↑":"Show less ↑"):(isZH?`查看全部 ${allAttentionItems.length} 项 →`:`View all ${allAttentionItems.length} items →`)}
             </button>
           </div>
@@ -281,7 +281,7 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
               {nextRes.notes?` · ${nextRes.notes}`:""}
             </div>
             {nextMins!=null&&nextMins>0&&(
-              <div style={{fontSize:11,color:"#185FA5",marginTop:6}}>
+              <div style={{fontSize:11,color:"var(--blue-600)",marginTop:6}}>
                 ⏰ {isZH?`${friendlyCountdown(nextMins)}开始`:`Starts ${friendlyCountdownEN(nextMins)}`}
               </div>
             )}
@@ -310,7 +310,7 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
           const d=r.reminderAt?.toDate?r.reminderAt.toDate():new Date(r.reminderAt);
           const timeStr=d.toLocaleTimeString(isZH?"zh-MY":"en-MY",{hour:"numeric",minute:"2-digit",hour12:true});
           return (
-            <Row key={i} bg={overdue?"#FAEEDA":undefined}>
+            <Row key={i} bg={overdue?"var(--amber-50)":undefined}>
               <span style={{fontSize:13}}>🔔</span>
               <div style={{flex:1}}>
                 <div style={{fontSize:13,fontWeight:500,color:"var(--text-primary,#111)"}}>{r.title}</div>
@@ -359,7 +359,7 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
       {/* ── 6. Health Score ────────────────────────────────────────────── */}
       <Card>
         <button onClick={()=>setShowHealth(true)} style={{width:"100%",background:"none",border:"none",cursor:"pointer",textAlign:"left",padding:0}}>
-          <CardHeader icon="💚" title={isZH?"库存健康度":"Inventory health"} right={<span style={{fontSize:11,color:"#185FA5"}}>{isZH?"查看详情 →":"Details →"}</span>} />
+          <CardHeader icon="💚" title={isZH?"库存健康度":"Inventory health"} right={<span style={{fontSize:11,color:"var(--blue-600)"}}>{isZH?"查看详情 →":"Details →"}</span>} />
           <div style={{padding:"4px 14px 14px",display:"flex",alignItems:"center",gap:14}}>
             <div style={{textAlign:"center",flexShrink:0}}>
               <div style={{fontSize:28,fontWeight:500,color:healthColor}}>{healthScore}%</div>
@@ -397,8 +397,8 @@ export default function NewDashboardPage({ t, historyData=[], items=[], isLoadin
                     <div style={{fontSize:13,fontWeight:500,color:"var(--text-primary,#111)"}}>{item.name}</div>
                     <div style={{fontSize:11,color:"var(--text-muted,#888)",marginTop:2}}>
                       {item.category}
-                      {item.chronicCount>0&&<span style={{color:"#A32D2D",marginLeft:6}}>· {isZH?`${item.chronicCount}次低库存`:`${item.chronicCount}× chronic`}</span>}
-                      {item.daysLeft!=null&&<span style={{color:"#854F0B",marginLeft:6}}>· {isZH?`约${item.daysLeft}天用完`:`~${item.daysLeft}d left`}</span>}
+                      {item.chronicCount>0&&<span style={{color:"var(--red-600)",marginLeft:6}}>· {isZH?`${item.chronicCount}次低库存`:`${item.chronicCount}× chronic`}</span>}
+                      {item.daysLeft!=null&&<span style={{color:"var(--amber-600)",marginLeft:6}}>· {isZH?`约${item.daysLeft}天用完`:`~${item.daysLeft}d left`}</span>}
                     </div>
                   </div>
                   <Pill label={isZH?`库存 ${item.stock}`:`Stock ${item.stock}`} c={R} />
