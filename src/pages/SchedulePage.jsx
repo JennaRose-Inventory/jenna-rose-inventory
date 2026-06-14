@@ -638,7 +638,7 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
         );
       })()}
 
-      {/* ── Modals 预订 ── */}}
+      {/* ── Modals 预订 ── */}
       {showAddRes && <Modal title={t.newReservation} onClose={() => setShowAddRes(false)}><ReservationForm onSave={handleAddRes} onCancel={() => setShowAddRes(false)} saving={saving} t={t} /></Modal>}
       {editingRes && <Modal title={t.editReservation} onClose={() => setEditingRes(null)}><ReservationForm initial={editingRes} onSave={handleEditRes} onCancel={() => setEditingRes(null)} saving={saving} t={t} /></Modal>}
       {confirmDelRes && (
