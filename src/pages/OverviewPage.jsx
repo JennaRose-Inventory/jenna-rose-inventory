@@ -529,12 +529,12 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
       {/* Past items separator + groups */}
       {Object.keys(pastGrouped).length > 0 && (
         <>
-          <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"8px 2px 12px" }}>
-            <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
-            <span style={{ fontSize:"10px", color:"var(--text-faint)", fontWeight:500, whiteSpace:"nowrap" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"16px 2px 14px" }}>
+            <div style={{ flex:1, height:"1px", background:"var(--border2)" }} />
+            <span style={{ fontSize:"10px", color:"var(--text-muted)", fontWeight:600, whiteSpace:"nowrap", letterSpacing:"0.04em", textTransform:"uppercase" }}>
               {isZH ? "过去点货" : "Previous days"}
             </span>
-            <div style={{ flex:1, height:"1px", background:"var(--border)" }} />
+            <div style={{ flex:1, height:"1px", background:"var(--border2)" }} />
           </div>
           {renderGroups(pastGrouped)}
         </>
