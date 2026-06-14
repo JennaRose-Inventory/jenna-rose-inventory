@@ -554,7 +554,11 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
           return t.isZH ? `收货 ${dateStr}` : dateStr;
         }
         // Merged freshMap: localFreshMap overrides prop freshMap for immediate UI
-        const mergedFreshMap = { ...freshMap, ...localFreshMap };
+        // null in localFreshMap means "deleted" — treat as no record
+        const mergedFreshMap = Object.fromEntries(
+          Object.entries({ ...freshMap, ...localFreshMap })
+            .filter(([, v]) => v !== null)
+        );
 
         async function markItemToday(category, itemName) {
           const mapKey = `${category}||${itemName}`;
@@ -572,12 +576,12 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
         async function cancelItemToday(category, itemName) {
           const mapKey = `${category}||${itemName}`;
-          // Check local prev first, then fall back to freshMap (handles post-refresh case)
-          const prevDate = localFreshMap[`__prev__${mapKey}`] ?? freshMap[mapKey] ?? null;
-          // Only restore if prevDate is not today (otherwise we'd just re-mark today)
-          const prevIsToday = prevDate ? isToday(prevDate) : false;
-          if (prevDate && !prevIsToday) {
-            // Restore previous date immediately
+          // Get previous date — from local store (no refresh) or null (after refresh)
+          const storedPrev = localFreshMap[`__prev__${mapKey}`] ?? null;
+          const prevDate = storedPrev && !isToday(storedPrev) ? storedPrev : null;
+
+          if (prevDate) {
+            // Restore to previous date immediately
             setLocalFreshMap(prev => {
               const n = {...prev};
               n[mapKey] = prevDate;
@@ -587,8 +591,13 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
             const { doc, setDoc } = await import("firebase/firestore");
             await setDoc(doc(db, "freshDates", `${category}__${itemName}`), { date: prevDate, category, name: itemName });
           } else {
-            // No valid previous date — delete record
-            setLocalFreshMap(prev => { const n={...prev}; delete n[mapKey]; delete n[`__prev__${mapKey}`]; return n; });
+            // Delete record AND immediately override local to undefined so UI shows button
+            setLocalFreshMap(prev => {
+              const n = {...prev};
+              n[mapKey] = null; // null = no record, show button
+              delete n[`__prev__${mapKey}`];
+              return n;
+            });
             const { doc, deleteDoc } = await import("firebase/firestore");
             await deleteDoc(doc(db, "freshDates", `${category}__${itemName}`));
           }
