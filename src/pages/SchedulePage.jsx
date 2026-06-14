@@ -557,25 +557,35 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
         const mergedFreshMap = { ...freshMap, ...localFreshMap };
 
         async function markItemToday(category, itemName) {
-          const key = `${category}__${itemName}`;
-          const firestoreKey = `${category}__${itemName}`;
-          // Update local state immediately for instant UI feedback
-          setLocalFreshMap(prev => ({ ...prev, [`${category}||${itemName}`]: todayFormatted }));
-          // Then write to Firestore
+          const mapKey = `${category}||${itemName}`;
+          const prevDate = freshMap[mapKey] || null; // save original before overwriting
+          // Update local state immediately
+          setLocalFreshMap(prev => ({
+            ...prev,
+            [mapKey]: todayFormatted,
+            [`__prev__${mapKey}`]: prevDate, // store previous date for cancel
+          }));
+          // Write to Firestore
           const { doc, setDoc } = await import("firebase/firestore");
-          await setDoc(doc(db, "freshDates", firestoreKey), { date: todayFormatted, category, name: itemName });
+          await setDoc(doc(db, "freshDates", `${category}__${itemName}`), { date: todayFormatted, category, name: itemName });
         }
 
-        async function cancelItemToday(category, itemName, previousDate) {
-          if (previousDate) {
-            // Restore previous date instead of deleting
-            setLocalFreshMap(prev => ({ ...prev, [`${category}||${itemName}`]: previousDate }));
-            const firestoreKey = `${category}__${itemName}`;
+        async function cancelItemToday(category, itemName) {
+          const mapKey = `${category}||${itemName}`;
+          const prevDate = localFreshMap[`__prev__${mapKey}`] ?? null;
+          if (prevDate) {
+            // Restore previous date
+            setLocalFreshMap(prev => {
+              const n = {...prev};
+              n[mapKey] = prevDate;
+              delete n[`__prev__${mapKey}`];
+              return n;
+            });
             const { doc, setDoc } = await import("firebase/firestore");
-            await setDoc(doc(db, "freshDates", firestoreKey), { date: previousDate, category, name: itemName });
+            await setDoc(doc(db, "freshDates", `${category}__${itemName}`), { date: prevDate, category, name: itemName });
           } else {
-            // No previous date — delete the record
-            setLocalFreshMap(prev => { const n={...prev}; delete n[`${category}||${itemName}`]; return n; });
+            // No previous — delete
+            setLocalFreshMap(prev => { const n={...prev}; delete n[mapKey]; delete n[`__prev__${mapKey}`]; return n; });
             const { doc, deleteDoc } = await import("firebase/firestore");
             await deleteDoc(doc(db, "freshDates", `${category}__${itemName}`));
           }
@@ -605,7 +615,6 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                   {itemNames.map((itemName, i) => {
                     const key = `${supplierName}||${itemName}`;
                     const lastDate = mergedFreshMap[key];
-                    const previousDate = freshMap[key] !== todayFormatted ? freshMap[key] : null;
                     const done = isToday(lastDate);
                     return (
                       <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:i<itemNames.length-1?"1px solid var(--border,#eee)":"none", background:done?"#f8fffe":"transparent" }}>
@@ -618,7 +627,7 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                           <button onClick={() => {
                               if (done) {
-                                cancelItemToday(supplierName, itemName, previousDate);
+                                cancelItemToday(supplierName, itemName);
                               } else {
                                 markItemToday(supplierName, itemName);
                               }
