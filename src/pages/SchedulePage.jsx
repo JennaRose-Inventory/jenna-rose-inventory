@@ -8,7 +8,7 @@ import {
   updateReminder, deleteReminder, markReminderComplete,
 } from "../services/reminderService";
 import { db } from "../firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { collection, doc, setDoc, onSnapshot, orderBy, query } from "firebase/firestore";
 
 // ─── 翻译 ──────────────────────────────────────────────────────────────────────
 function useT(lang) {
@@ -207,7 +207,7 @@ function ReminderForm({ initial = EMPTY_REM, onSave, onCancel, saving, t }) {
 }
 
 // ─── 主页面 ────────────────────────────────────────────────────────────────────
-export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, supplierFreshMap: supplierFreshMapProp = {}, onFreshDate }) {
+export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, onFreshDate }) {
   const t = useT(lang);
   const [section, setSection] = useState("reservations"); // "reservations" | "reminders"
 
@@ -227,15 +227,28 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
   const [saving, setSaving] = useState(false);
   const [restockModal, setRestockModal] = useState(null); // { supplierName }
-  // Use supplierFreshMap from App.jsx (passed as prop)
-  // Also maintain local state for immediate updates after marking restock
-  const [localSupplierFreshMap, setLocalSupplierFreshMap] = useState({});
-  const supplierFreshMap = { ...supplierFreshMapProp, ...localSupplierFreshMap };
+  const [supplierFreshMap, setSupplierFreshMap] = useState({}); // { supplierName: "DD/MM/YYYY" }
+
+  // Listen to supplier restock dates from Firestore
+  useEffect(() => {
+    const q = query(collection(db, "freshDates"));
+    const unsub = onSnapshot(q, snap => {
+      const map = {};
+      snap.docs.forEach(d => {
+        const key = d.id;
+        if (key.startsWith("supplier__")) {
+          const name = key.replace("supplier__", "");
+          map[name] = d.data().date;
+        }
+      });
+      setSupplierFreshMap(map);
+    });
+    return unsub;
+  }, []);
 
   async function handleSupplierRestock(supplierName, dateStr) {
     const key = `supplier__${supplierName}`;
     await setDoc(doc(db, "freshDates", key), { date: dateStr, supplierName });
-    setLocalSupplierFreshMap(prev => ({ ...prev, [supplierName]: dateStr }));
     setRestockModal(null);
   }
 
@@ -577,14 +590,22 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                           </div>
                         </div>
                         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                          {!done ? (
-                            <button onClick={() => markItemToday(supplierName, itemName)}
-                              style={{ fontSize:12, padding:"6px 12px", borderRadius:8, cursor:"pointer", border:"1px solid var(--brand-pale,#edddd2)", background:"var(--brand-ghost,#f7f0eb)", color:"var(--brand-mid,#7a4a2e)", fontWeight:600 }}>
-                              {t.isZH?"今日收货":"Received"}
-                            </button>
-                          ) : (
-                            <span style={{ fontSize:12, padding:"6px 10px", borderRadius:8, background:"#E1F5EE", color:"#0F6E56", fontWeight:600 }}>✓</span>
-                          )}
+                          <button onClick={async () => {
+                              if (done) {
+                                // Toggle off — delete record
+                                const { doc, deleteDoc } = await import("firebase/firestore");
+                                await deleteDoc(doc(db, "freshDates", `${supplierName}__${itemName}`));
+                              } else {
+                                markItemToday(supplierName, itemName);
+                              }
+                            }} style={{
+                              fontSize:12, padding:"6px 12px", borderRadius:8, cursor:"pointer",
+                              border:`1px solid ${done?"#9FE1CB":"var(--brand-pale,#edddd2)"}`,
+                              background:done?"#E1F5EE":"var(--brand-ghost,#f7f0eb)",
+                              color:done?"#0F6E56":"var(--brand-mid,#7a4a2e)", fontWeight:600,
+                            }}>
+                            {done ? "✓ "+( t.isZH?"已收货":"Done") : (t.isZH?"今日收货":"Received")}
+                          </button>
                           <button onClick={() => setRestockModal({ supplierName, itemName, currentDate:lastDate, isItem:true })}
                             style={{ fontSize:12, padding:"6px 10px", borderRadius:8, cursor:"pointer", border:"1px solid var(--border,#ddd)", background:"var(--surface2,#f7f7f7)", color:"var(--text-muted,#888)" }}>
                             {t.isZH?"改":"Edit"}
@@ -617,14 +638,24 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                       <div style={{ fontSize:12, color:done?"#1D9E75":"var(--text-muted,#888)", marginTop:2 }}>{done?"✓ ":"🕐 "}{getDateLabel(lastDate)}</div>
                     </div>
                     <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                      {!done ? (
-                        <button onClick={() => handleSupplierRestock(name, todayFormatted)}
-                          style={{ fontSize:12, padding:"7px 14px", borderRadius:8, cursor:"pointer", border:"1px solid var(--brand-pale,#edddd2)", background:"var(--brand-ghost,#f7f0eb)", color:"var(--brand-mid,#7a4a2e)", fontWeight:600, whiteSpace:"nowrap" }}>
-                          {t.isZH?"今日收货":"Received Today"}
-                        </button>
-                      ) : (
-                        <span style={{ fontSize:12, padding:"7px 12px", borderRadius:8, background:"#E1F5EE", color:"#0F6E56", fontWeight:600 }}>✓ {t.isZH?"已收货":"Done"}</span>
-                      )}
+                      <button onClick={() => {
+                          if (done) {
+                            // Toggle off — delete record
+                            import("firebase/firestore").then(({ doc, deleteDoc }) => {
+                              deleteDoc(doc(db, "freshDates", `supplier__${name}`));
+                              setLocalSupplierFreshMap(prev => { const n={...prev}; delete n[name]; return n; });
+                            });
+                          } else {
+                            handleSupplierRestock(name, todayFormatted);
+                          }
+                        }} style={{
+                          fontSize:12, padding:"7px 14px", borderRadius:8, cursor:"pointer",
+                          border:`1px solid ${done?"#9FE1CB":"var(--brand-pale,#edddd2)"}`,
+                          background:done?"#E1F5EE":"var(--brand-ghost,#f7f0eb)",
+                          color:done?"#0F6E56":"var(--brand-mid,#7a4a2e)", fontWeight:600, whiteSpace:"nowrap",
+                        }}>
+                        {done ? "✓ "+(t.isZH?"已收货":"Done") : (t.isZH?"今日收货":"Received Today")}
+                      </button>
                       <button onClick={() => setRestockModal({ supplierName:name, currentDate:lastDate, isItem:false })}
                         style={{ fontSize:12, padding:"7px 10px", borderRadius:8, cursor:"pointer", border:"1px solid var(--border,#ddd)", background:"var(--surface2,#f7f7f7)", color:"var(--text-muted,#888)" }}>
                         {t.isZH?"改":"Edit"}
@@ -656,21 +687,25 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
           }
           setRestockModal(null);
         }
+
         return (
           <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setRestockModal(null)}>
-            <div onClick={e=>e.stopPropagation()} style={{ background:"var(--surface,#fff)", width:"100%", maxWidth:520, borderRadius:"16px 16px 0 0", padding:"24px 20px 32px" }}>
+            <div onClick={e=>e.stopPropagation()} style={{ background:"var(--surface,#fff)", width:"100%", maxWidth:520, borderRadius:"16px 16px 0 0", padding:"20px 20px 32px" }}>
+              {/* Header */}
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                <span style={{ fontWeight:600, fontSize:17 }}>📦 {restockModal.itemName || restockModal.supplierName}</span>
+                <span style={{ fontWeight:600, fontSize:16 }}>📦 {restockModal.itemName || restockModal.supplierName}</span>
                 <button onClick={() => setRestockModal(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>×</button>
               </div>
-              {restockModal.currentDate && <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:12 }}>{t.isZH?`目前记录：${restockModal.currentDate}`:`Current: ${restockModal.currentDate}`}</div>}
-              <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:8 }}>{t.isZH?"修改收货日期":"Change Date"}</div>
-              <input type="date" defaultValue={todayVal} id="supplier-restock-date"
-                style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", borderRadius:8, border:"1.5px solid var(--border,#ddd)", fontSize:15, marginBottom:18, background:"var(--surface2,#f5f5f5)", color:"var(--text-primary,#111)" }} />
-              <div style={{ display:"flex", gap:10 }}>
-                <button onClick={() => setRestockModal(null)} style={{ flex:1, padding:12, borderRadius:10, border:"1.5px solid var(--border,#ddd)", background:"var(--surface2,#f5f5f5)", fontSize:14, cursor:"pointer" }}>{t.cancelBtn}</button>
-                <button onClick={confirmEdit} style={{ flex:1, padding:12, borderRadius:10, background:"#3d2314", color:"#fff", fontSize:14, fontWeight:600, border:"none", cursor:"pointer" }}>{t.isZH?"确认修改":"Confirm"}</button>
+              {/* Date picker — shown immediately, no scrolling needed */}
+              <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:6 }}>{t.isZH?"修改收货日期":"Change restock date"}</div>
+              <input type="date" defaultValue={restockModal.currentDate ? (() => { const [d,m,y]=restockModal.currentDate.split("/"); return `${y}-${m}-${d}`; })() : todayVal} id="supplier-restock-date"
+                style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", borderRadius:8, border:"1.5px solid var(--border,#ddd)", fontSize:15, marginBottom:14, background:"var(--surface2,#f5f5f5)", color:"var(--text-primary,#111)" }} />
+              {/* Buttons */}
+              <div style={{ display:"flex", gap:8, marginBottom: restockModal.currentDate ? 10 : 0 }}>
+                <button onClick={() => setRestockModal(null)} style={{ flex:1, padding:11, borderRadius:10, border:"1.5px solid var(--border,#ddd)", background:"var(--surface2,#f5f5f5)", fontSize:14, cursor:"pointer" }}>{t.cancelBtn}</button>
+                <button onClick={confirmEdit} style={{ flex:2, padding:11, borderRadius:10, background:"#3d2314", color:"#fff", fontSize:14, fontWeight:600, border:"none", cursor:"pointer" }}>{t.isZH?"确认修改":"Confirm"}</button>
               </div>
+
             </div>
           </div>
         );
