@@ -227,6 +227,7 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
   const [saving, setSaving] = useState(false);
   const [restockModal, setRestockModal] = useState(null);
+  const [expandedSuppliers, setExpandedSuppliers] = useState({});
   const [localFreshMap, setLocalFreshMap] = useState({}); // immediate UI updates for item-level restock
   const [supplierFreshMap, setSupplierFreshMap] = useState({}); // { supplierName: "DD/MM/YYYY" }
 
@@ -584,7 +585,8 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
         const mlItems = ["Mix Fruits","Hazelnut Chocolate","Charcoal Yam","Burnt Cheese Brulee","Bobochacha","Strawberry Burnt Cheese","Raspberry Matcha","Pistachio Yam"];
 
         function ItemLevelSupplier({ supplierName, itemNames }) {
-          const [expanded, setExpanded] = useState(false);
+          const expanded = !!expandedSuppliers[supplierName];
+          const setExpanded = (v) => setExpandedSuppliers(prev => ({ ...prev, [supplierName]: typeof v === "function" ? v(expanded) : v }));
           const todayCount = itemNames.filter(n => isToday(mergedFreshMap[`${supplierName}||${n}`])).length;
           const allDone = todayCount === itemNames.length;
           return (
