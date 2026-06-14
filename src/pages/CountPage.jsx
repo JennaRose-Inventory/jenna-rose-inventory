@@ -382,6 +382,9 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
                           fontSize: 16, fontWeight: 700,
                           background: val !== "" ? "var(--brand-ghost)" : "var(--surface2)",
                           color: "var(--text-primary)",
+                          MozAppearance: "textfield",
+                          WebkitAppearance: "none",
+                          appearance: "textfield",
                         }}
                       />
                       <button

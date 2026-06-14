@@ -150,7 +150,9 @@ input:focus, select:focus {
   outline: 2px solid var(--brand-light);
   outline-offset: 0px;
 }
-input[type=number]::-webkit-inner-spin-button { opacity: 0.4; }
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button { display: none; }
+input[type=number] { -moz-appearance: textfield; }
 input[type=number] { font-variant-numeric: slashed-zero tabular-nums; }
 
 /* ── Selection ── */
