@@ -78,63 +78,7 @@
 }
 }
 
-/* ── Dark mode ── */
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* Backgrounds — pure dark, no colour cast */
-    --bg:        #0f0f0f;
-    --bg2:       #141414;
-    --surface:   #1a1a1a;
-    --surface2:  #202020;
-    --surface3:  #272727;
 
-    /* Borders — subtle grey lines */
-    --border:    #2e2e2e;
-    --border2:   #3a3a3a;
-
-    /* Brand — muted warm tone, only for key actions */
-    --brand:       #c8784a;
-    --brand-soft:  #b86a3e;
-    --brand-mid:   #c8784a;
-    --brand-light: #d4946a;
-    --brand-pale:  #2a1a10;
-    --brand-ghost: #1e1208;
-
-    /* Semantic — visible but not garish */
-    --green-700:  #5cb87a;
-    --green-600:  #5cb87a;
-    --green-500:  #5cb87a;
-    --green-100:  #0e2a18;
-    --green-50:   #081610;
-
-    --red-700:    #e06060;
-    --red-600:    #e06060;
-    --red-500:    #e06060;
-    --red-100:    #3a1010;
-    --red-50:     #200808;
-
-    --amber-600:  #d4a843;
-    --amber-500:  #d4a843;
-    --amber-100:  #352408;
-    --amber-50:   #1e1404;
-
-    --blue-600:   #7aaadc;
-    --blue-100:   #122030;
-    --blue-50:    #0a1420;
-
-    /* Typography — pure white hierarchy, easy to read */
-    --text-primary:   #f0f0f0;
-    --text-secondary: #aaaaaa;
-    --text-muted:     #666666;
-    --text-faint:     #444444;
-
-    /* Shadows */
-    --shadow-xs:  0 1px 3px rgba(0,0,0,0.5);
-    --shadow-sm:  0 2px 8px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4);
-    --shadow-md:  0 4px 16px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
-    --shadow-lg:  0 12px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5);
-  }
-}
 
 /* ── Reset ── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -212,25 +156,6 @@ input[type=number] { font-variant-numeric: slashed-zero tabular-nums; }
 /* ── Selection ── */
 ::selection { background: var(--brand-pale); color: var(--brand); }
 
-/* ── Dark mode glass surfaces ── */
-@media (prefers-color-scheme: dark) {
-  /* Override any hardcoded white backgrounds in inline styles */
-  .dark-glass {
-    background: rgba(42, 34, 28, 0.92) !important;
-  }
-}
-
-/* ── Input dark mode ── */
-@media (prefers-color-scheme: dark) {
-  input, select, textarea {
-    color-scheme: dark;
-  }
-  input[type="date"],
-  input[type="time"],
-  input[type="datetime-local"] {
-    color-scheme: dark;
-  }
-}
 
 /* ── Page slide transitions ── */
 @keyframes slideInRight {
