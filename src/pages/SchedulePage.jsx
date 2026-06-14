@@ -226,7 +226,8 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
   const [confirmDelRem, setConfirmDelRem] = useState(null);
 
   const [saving, setSaving] = useState(false);
-  const [restockModal, setRestockModal] = useState(null); // { supplierName }
+  const [restockModal, setRestockModal] = useState(null);
+  const [localFreshMap, setLocalFreshMap] = useState({}); // immediate UI updates for item-level restock
   const [supplierFreshMap, setSupplierFreshMap] = useState({}); // { supplierName: "DD/MM/YYYY" }
 
   // Listen to supplier restock dates from Firestore
@@ -551,10 +552,32 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
           if (isYesterday(dateStr)) return t.isZH ? "昨天收货" : "Yesterday";
           return t.isZH ? `收货 ${dateStr}` : dateStr;
         }
+        // Merged freshMap: localFreshMap overrides prop freshMap for immediate UI
+        const mergedFreshMap = { ...freshMap, ...localFreshMap };
+
         async function markItemToday(category, itemName) {
-          const { doc, setDoc } = await import("firebase/firestore");
           const key = `${category}__${itemName}`;
-          await setDoc(doc(db, "freshDates", key), { date: todayFormatted, category, name: itemName });
+          const firestoreKey = `${category}__${itemName}`;
+          // Update local state immediately for instant UI feedback
+          setLocalFreshMap(prev => ({ ...prev, [`${category}||${itemName}`]: todayFormatted }));
+          // Then write to Firestore
+          const { doc, setDoc } = await import("firebase/firestore");
+          await setDoc(doc(db, "freshDates", firestoreKey), { date: todayFormatted, category, name: itemName });
+        }
+
+        async function cancelItemToday(category, itemName, previousDate) {
+          if (previousDate) {
+            // Restore previous date instead of deleting
+            setLocalFreshMap(prev => ({ ...prev, [`${category}||${itemName}`]: previousDate }));
+            const firestoreKey = `${category}__${itemName}`;
+            const { doc, setDoc } = await import("firebase/firestore");
+            await setDoc(doc(db, "freshDates", firestoreKey), { date: previousDate, category, name: itemName });
+          } else {
+            // No previous date — delete the record
+            setLocalFreshMap(prev => { const n={...prev}; delete n[`${category}||${itemName}`]; return n; });
+            const { doc, deleteDoc } = await import("firebase/firestore");
+            await deleteDoc(doc(db, "freshDates", `${category}__${itemName}`));
+          }
         }
 
         const rvItems = ["New York","Ultimate","Lemon Yogurt Tart","Brownie","Tart","Green Grapes","Earl Grey Lychee","Fruit Garden Pandan","Mango Passion Oolong"];
@@ -562,7 +585,7 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
         function ItemLevelSupplier({ supplierName, itemNames }) {
           const [expanded, setExpanded] = useState(false);
-          const todayCount = itemNames.filter(n => isToday(freshMap[`${supplierName}||${n}`])).length;
+          const todayCount = itemNames.filter(n => isToday(mergedFreshMap[`${supplierName}||${n}`])).length;
           const allDone = todayCount === itemNames.length;
           return (
             <div style={{ background:"var(--surface,#fff)", border:"1px solid var(--border,#eee)", borderLeft:`3px solid ${allDone?"#1D9E75":"var(--brand-light,#b8896a)"}`, borderRadius:12, overflow:"hidden", marginBottom:8 }}>
@@ -579,7 +602,8 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                 <div style={{ borderTop:"1px solid var(--border,#eee)" }}>
                   {itemNames.map((itemName, i) => {
                     const key = `${supplierName}||${itemName}`;
-                    const lastDate = freshMap[key];
+                    const lastDate = mergedFreshMap[key];
+                    const previousDate = freshMap[key] !== todayFormatted ? freshMap[key] : null;
                     const done = isToday(lastDate);
                     return (
                       <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:i<itemNames.length-1?"1px solid var(--border,#eee)":"none", background:done?"#f8fffe":"transparent" }}>
@@ -590,11 +614,9 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                           </div>
                         </div>
                         <div style={{ display:"flex", gap:6, flexShrink:0 }}>
-                          <button onClick={async () => {
+                          <button onClick={() => {
                               if (done) {
-                                // Toggle off — delete record
-                                const { doc, deleteDoc } = await import("firebase/firestore");
-                                await deleteDoc(doc(db, "freshDates", `${supplierName}__${itemName}`));
+                                cancelItemToday(supplierName, itemName, previousDate);
                               } else {
                                 markItemToday(supplierName, itemName);
                               }
@@ -640,11 +662,16 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
                     <div style={{ display:"flex", gap:6, flexShrink:0 }}>
                       <button onClick={() => {
                           if (done) {
-                            // Toggle off — delete record
-                            import("firebase/firestore").then(({ doc, deleteDoc }) => {
-                              deleteDoc(doc(db, "freshDates", `supplier__${name}`));
-                              setLocalSupplierFreshMap(prev => { const n={...prev}; delete n[name]; return n; });
-                            });
+                            // Restore previous date or delete if none
+                            const prevDate = supplierFreshMap[name] !== todayFormatted ? supplierFreshMap[name] : null;
+                            if (prevDate) {
+                              handleSupplierRestock(name, prevDate);
+                            } else {
+                              import("firebase/firestore").then(({ doc, deleteDoc }) => {
+                                deleteDoc(doc(db, "freshDates", `supplier__${name}`));
+                                setLocalSupplierFreshMap(prev => { const n={...prev}; delete n[name]; return n; });
+                              });
+                            }
                           } else {
                             handleSupplierRestock(name, todayFormatted);
                           }
