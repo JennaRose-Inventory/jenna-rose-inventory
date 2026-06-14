@@ -218,13 +218,13 @@ export default function App() {
   ])];
 
   const NAV = [
-    { id:"Count",        iconName:"count",    label:t.navCount,                                          depts:["frontend","kitchen"] },
-    { id:"Overview",     iconName:"overview", label:t.navOverview,                                       depts:["frontend","kitchen"] },
-    { id:"History",      iconName:"history",  label:t.navHistory,                                        depts:["frontend","kitchen"] },
-    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "仪表盘" : "Dashboard",   depts:["frontend","kitchen"] },
-    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "预定" : "Schedule",      depts:["frontend"] },
-    { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
-  ].filter(n => n.depts.includes(dept || "frontend"));
+    { id:"Count",        iconName:"count",    label:t.navCount,                                            depts:["frontend","kitchen"], adminOnly:false },
+    { id:"Overview",     iconName:"overview", label:t.navOverview,                                         depts:["frontend","kitchen"], adminOnly:false },
+    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "操作" : "Operations",      depts:["frontend"],            adminOnly:false },
+    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "运营" : "Operations",      depts:["frontend","kitchen"],  adminOnly:true  },
+    { id:"History",      iconName:"history",  label:t.appSub === "库存系统" ? "历史" : "History",         depts:["frontend","kitchen"],  adminOnly:false },
+    { id:"Manage",       iconName:"manage",   label:t.navManage,                                           depts:["frontend","kitchen"],  adminOnly:false },
+  ].filter(n => n.depts.includes(dept || "frontend") && (!n.adminOnly || owner));
 
   function navigateTo(id) {
     const navIds = NAV.map(n => n.id);
@@ -663,7 +663,7 @@ export default function App() {
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
         {page === "Dashboard"   && <NewDashboardPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} />}
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
-        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} />}
+        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
         {page === "Debug"        && owner      && <DebugPage />}
         </div>
       </div>
