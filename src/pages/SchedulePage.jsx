@@ -8,7 +8,7 @@ import {
   updateReminder, deleteReminder, markReminderComplete,
 } from "../services/reminderService";
 import { db } from "../firebase";
-import { collection, doc, setDoc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 
 // ─── 翻译 ──────────────────────────────────────────────────────────────────────
 function useT(lang) {
@@ -207,7 +207,7 @@ function ReminderForm({ initial = EMPTY_REM, onSave, onCancel, saving, t }) {
 }
 
 // ─── 主页面 ────────────────────────────────────────────────────────────────────
-export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, onFreshDate }) {
+export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, supplierFreshMap: supplierFreshMapProp = {}, onFreshDate }) {
   const t = useT(lang);
   const [section, setSection] = useState("reservations"); // "reservations" | "reminders"
 
@@ -227,28 +227,15 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
   const [saving, setSaving] = useState(false);
   const [restockModal, setRestockModal] = useState(null); // { supplierName }
-  const [supplierFreshMap, setSupplierFreshMap] = useState({}); // { supplierName: "DD/MM/YYYY" }
-
-  // Listen to supplier restock dates from Firestore
-  useEffect(() => {
-    const q = query(collection(db, "freshDates"));
-    const unsub = onSnapshot(q, snap => {
-      const map = {};
-      snap.docs.forEach(d => {
-        const key = d.id;
-        if (key.startsWith("supplier__")) {
-          const name = key.replace("supplier__", "");
-          map[name] = d.data().date;
-        }
-      });
-      setSupplierFreshMap(map);
-    });
-    return unsub;
-  }, []);
+  // Use supplierFreshMap from App.jsx (passed as prop)
+  // Also maintain local state for immediate updates after marking restock
+  const [localSupplierFreshMap, setLocalSupplierFreshMap] = useState({});
+  const supplierFreshMap = { ...supplierFreshMapProp, ...localSupplierFreshMap };
 
   async function handleSupplierRestock(supplierName, dateStr) {
     const key = `supplier__${supplierName}`;
     await setDoc(doc(db, "freshDates", key), { date: dateStr, supplierName });
+    setLocalSupplierFreshMap(prev => ({ ...prev, [supplierName]: dateStr }));
     setRestockModal(null);
   }
 
