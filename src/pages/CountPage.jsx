@@ -118,7 +118,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
   const [pendingDay, setPendingDay]   = useState(null);
   const inputRefs = useRef({});
   const isZH = t.appSub === "库存系统";
-  const [restockModal, setRestockModal] = useState(null); // { category, name, currentDate }
+
 
   const lastRecord = historyData[0];
   // Fix #1: build lastMap using both current name AND _origName to handle renames
@@ -331,24 +331,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
                         </span>
                       </div>
                     )}
-                    {/* Mark Restock button — only for fresh-tracked items */}
-                    {freshDays > 0 && onFreshDate && (
-                      <button
-                        onClick={() => setRestockModal({ category: item.category, name: item.name, currentDate: restockDate })}
-                        style={{
-                          marginTop: "4px",
-                          fontSize: "9px", fontWeight: 600,
-                          color: "var(--brand-mid)",
-                          background: "var(--brand-ghost)",
-                          border: "1px solid var(--brand-pale)",
-                          borderRadius: "var(--radius-full)",
-                          padding: "2px 9px",
-                          cursor: "pointer",
-                          display: "inline-flex", alignItems: "center", gap: "4px",
-                        }}>
-                        📦 {isZH ? `收货${restockDate ? ` · ${restockDate}` : ""}` : `Restock${restockDate ? ` · ${restockDate}` : ""}`}
-                      </button>
-                    )}
+
                   </div>
                   {type === "status" ? (
                     <StatusToggle value={val} onChange={(v) => onCountChange(item, v)} t={t} />
@@ -416,57 +399,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
         </div>
       )}
 
-      {/* Restock confirm modal */}
-      {restockModal && (() => {
-        const today = new Date().toLocaleDateString("en-GB"); // DD/MM/YYYY
-        return createPortal(
-          <>
-            <div onClick={() => setRestockModal(null)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 9998 }} />
-            <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: "calc(100% - 40px)", maxWidth: "340px", background: "var(--surface)", borderRadius: "var(--radius-xl)", boxShadow: "0 8px 32px rgba(0,0,0,0.15)", zIndex: 9999, padding: "24px 22px" }}>
-              <div style={{ fontWeight: 700, fontSize: "15px", color: "var(--text-primary)", marginBottom: "6px" }}>
-                📦 {isZH ? "收货确认" : "Mark Restock"}
-              </div>
-              <div style={{ fontSize: "13px", color: "var(--text-muted)", marginBottom: "18px" }}>
-                {restockModal.name}
-                {restockModal.currentDate && (
-                  <span style={{ fontSize: "11px", color: "var(--text-faint)", marginLeft: "8px" }}>
-                    {isZH ? `上次：${restockModal.currentDate}` : `Last: ${restockModal.currentDate}`}
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--text-muted)", marginBottom: "8px" }}>
-                {isZH ? "收货日期" : "Restock Date"}
-              </div>
-              <input
-                type="date"
-                defaultValue={(() => {
-                  const d = new Date();
-                  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-                })()}
-                id="restock-date-input"
-                style={{ width: "100%", boxSizing: "border-box", padding: "10px 12px", borderRadius: "var(--radius-sm)", border: "1.5px solid var(--border)", fontSize: "14px", marginBottom: "18px", background: "var(--surface2)", color: "var(--text-primary)" }}
-              />
-              <div style={{ display: "flex", gap: "10px" }}>
-                <button onClick={() => setRestockModal(null)} style={{ flex: 1, padding: "11px", borderRadius: "var(--radius-sm)", border: "1.5px solid var(--border)", background: "var(--surface2)", fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>
-                  {isZH ? "取消" : "Cancel"}
-                </button>
-                <button onClick={() => {
-                  const input = document.getElementById("restock-date-input");
-                  const dateVal = input?.value;
-                  if (!dateVal) return;
-                  const [y, m, d] = dateVal.split("-");
-                  const formatted = `${d}/${m}/${y}`;
-                  onFreshDate(restockModal.category, restockModal.name, formatted);
-                  setRestockModal(null);
-                }} style={{ flex: 1, padding: "11px", borderRadius: "var(--radius-sm)", background: "var(--brand)", color: "#fff", fontSize: "13px", fontWeight: 600, border: "none" }}>
-                  {isZH ? "确认收货" : "Confirm"}
-                </button>
-              </div>
-            </div>
-          </>,
-          document.body
-        );
-      })()}
+
 
       {/* Sticky save button */}
       <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: "480px", padding: "12px 16px", paddingBottom: "calc(12px + env(safe-area-inset-bottom))", background: "linear-gradient(to top, var(--bg) 70%, transparent)", zIndex: 100 }}>

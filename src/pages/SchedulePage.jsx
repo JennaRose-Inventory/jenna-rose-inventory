@@ -529,65 +529,120 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
       {/* ══════════════════════════════════════════════ 收货 ══ */}
       {section === "restock" && (() => {
-        const supplierNames = Object.keys(suppliers);
+        const ITEM_LEVEL = ["RV Bakery", "千层蛋糕"];
+        const supplierNames = Object.keys(suppliers).filter(n => !ITEM_LEVEL.includes(n));
+        const todayFormatted = (() => {
+          const now = new Date(); const pad = n => String(n).padStart(2,"0");
+          return `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+        })();
+        function isToday(dateStr) {
+          if (!dateStr) return false;
+          const [d,m,y] = dateStr.split("/").map(Number); const now = new Date();
+          return d===now.getDate() && m===now.getMonth()+1 && y===now.getFullYear();
+        }
+        function isYesterday(dateStr) {
+          if (!dateStr) return false;
+          const [d,m,y] = dateStr.split("/").map(Number); const yest = new Date(); yest.setDate(yest.getDate()-1);
+          return d===yest.getDate() && m===yest.getMonth()+1 && y===yest.getFullYear();
+        }
+        function getDateLabel(dateStr) {
+          if (!dateStr) return t.isZH ? "从未记录" : "Never recorded";
+          if (isToday(dateStr)) return t.isZH ? "今天收货" : "Today";
+          if (isYesterday(dateStr)) return t.isZH ? "昨天收货" : "Yesterday";
+          return t.isZH ? `收货 ${dateStr}` : dateStr;
+        }
+        async function markItemToday(category, itemName) {
+          const { doc, setDoc } = await import("firebase/firestore");
+          const key = `${category}__${itemName}`;
+          await setDoc(doc(db, "freshDates", key), { date: todayFormatted, category, name: itemName });
+        }
+
+        const rvItems = ["New York","Ultimate","Lemon Yogurt Tart","Brownie","Tart","Green Grapes","Earl Grey Lychee","Fruit Garden Pandan","Mango Passion Oolong"];
+        const mlItems = ["Mix Fruits","Hazelnut Chocolate","Charcoal Yam","Burnt Cheese Brulee","Bobochacha","Strawberry Burnt Cheese","Raspberry Matcha","Pistachio Yam"];
+
+        function ItemLevelSupplier({ supplierName, itemNames }) {
+          const [expanded, setExpanded] = useState(false);
+          const todayCount = itemNames.filter(n => isToday(freshMap[`${supplierName}||${n}`])).length;
+          const allDone = todayCount === itemNames.length;
+          return (
+            <div style={{ background:"var(--surface,#fff)", border:"1px solid var(--border,#eee)", borderLeft:`3px solid ${allDone?"#1D9E75":"var(--brand-light,#b8896a)"}`, borderRadius:12, overflow:"hidden", marginBottom:8 }}>
+              <button onClick={() => setExpanded(v=>!v)} style={{ width:"100%", display:"flex", alignItems:"center", gap:12, padding:"12px 14px", background:"none", border:"none", cursor:"pointer", textAlign:"left" }}>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:14, fontWeight:700, color:"var(--text-primary,#111)" }}>{supplierName}</div>
+                  <div style={{ fontSize:12, color:allDone?"#1D9E75":"var(--text-muted,#888)", marginTop:2 }}>
+                    {allDone ? (t.isZH?"✓ 全部已收货":"✓ All received") : `${todayCount}/${itemNames.length} ${t.isZH?"已收货":"received today"}`}
+                  </div>
+                </div>
+                <span style={{ fontSize:16, color:"var(--text-muted,#888)", transform:expanded?"rotate(180deg)":"none", transition:"transform 0.2s", display:"block" }}>⌄</span>
+              </button>
+              {expanded && (
+                <div style={{ borderTop:"1px solid var(--border,#eee)" }}>
+                  {itemNames.map((itemName, i) => {
+                    const key = `${supplierName}||${itemName}`;
+                    const lastDate = freshMap[key];
+                    const done = isToday(lastDate);
+                    return (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom:i<itemNames.length-1?"1px solid var(--border,#eee)":"none", background:done?"#f8fffe":"transparent" }}>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontSize:13, fontWeight:500, color:"var(--text-primary,#111)" }}>{itemName}</div>
+                          <div style={{ fontSize:11, color:done?"#1D9E75":"var(--text-muted,#888)", marginTop:1 }}>
+                            {done?"✓ ":"🕐 "}{getDateLabel(lastDate)}
+                          </div>
+                        </div>
+                        <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                          {!done ? (
+                            <button onClick={() => markItemToday(supplierName, itemName)}
+                              style={{ fontSize:12, padding:"6px 12px", borderRadius:8, cursor:"pointer", border:"1px solid var(--brand-pale,#edddd2)", background:"var(--brand-ghost,#f7f0eb)", color:"var(--brand-mid,#7a4a2e)", fontWeight:600 }}>
+                              {t.isZH?"今日收货":"Received"}
+                            </button>
+                          ) : (
+                            <span style={{ fontSize:12, padding:"6px 10px", borderRadius:8, background:"#E1F5EE", color:"#0F6E56", fontWeight:600 }}>✓</span>
+                          )}
+                          <button onClick={() => setRestockModal({ supplierName, itemName, currentDate:lastDate, isItem:true })}
+                            style={{ fontSize:12, padding:"6px 10px", borderRadius:8, cursor:"pointer", border:"1px solid var(--border,#ddd)", background:"var(--surface2,#f7f7f7)", color:"var(--text-muted,#888)" }}>
+                            {t.isZH?"改":"Edit"}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          );
+        }
+
         return (
           <>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary, #111)" }}>📦 {t.isZH ? "供应商收货记录" : "Supplier Restock"}</div>
-            </div>
-            {supplierNames.length === 0 && (
-              <div style={{ textAlign: "center", padding: "48px 20px", color: "#aaa" }}>
-                <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
-                <div>{t.isZH ? "没有供应商" : "No suppliers found"}</div>
-              </div>
-            )}
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div style={{ fontSize:18, fontWeight:700, color:"var(--text-primary,#111)", marginBottom:14 }}>📦 {t.isZH?"收货记录":"Restock"}</div>
+            <div style={{ fontSize:10, fontWeight:600, color:"var(--text-faint,#bbb)", letterSpacing:1, marginBottom:8, textTransform:"uppercase" }}>{t.isZH?"按 Item 记录":"Item Level"}</div>
+            <ItemLevelSupplier supplierName="RV Bakery" itemNames={rvItems} />
+            <ItemLevelSupplier supplierName="千层蛋糕" itemNames={mlItems} />
+            {supplierNames.length > 0 && <div style={{ fontSize:10, fontWeight:600, color:"var(--text-faint,#bbb)", letterSpacing:1, margin:"14px 0 8px", textTransform:"uppercase" }}>{t.isZH?"按供应商记录":"Supplier Level"}</div>}
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
               {supplierNames.map((name, i) => {
                 const lastDate = supplierFreshMap[name];
-                const isToday = (() => {
-                  if (!lastDate) return false;
-                  const [d, m, y] = lastDate.split("/").map(Number);
-                  const now = new Date();
-                  return d === now.getDate() && m === now.getMonth()+1 && y === now.getFullYear();
-                })();
-                const isYesterday = (() => {
-                  if (!lastDate) return false;
-                  const [d, m, y] = lastDate.split("/").map(Number);
-                  const yest = new Date(); yest.setDate(yest.getDate()-1);
-                  return d === yest.getDate() && m === yest.getMonth()+1 && y === yest.getFullYear();
-                })();
-                const dateLabel = !lastDate
-                  ? (t.isZH ? "从未记录" : "Never recorded")
-                  : isToday
-                  ? (t.isZH ? "今天收货" : "Today")
-                  : isYesterday
-                  ? (t.isZH ? "昨天收货" : "Yesterday")
-                  : (t.isZH ? `收货 ${lastDate}` : lastDate);
+                const done = isToday(lastDate);
                 return (
-                  <div key={i} style={{
-                    background: "var(--surface, #fff)",
-                    border: "1px solid var(--border, #eee)",
-                    borderLeft: `3px solid ${isToday ? "#1D9E75" : lastDate ? "var(--brand-light, #b8896a)" : "var(--border, #eee)"}`,
-                    borderRadius: 12, padding: "14px 16px",
-                    display: "flex", alignItems: "center", gap: 12,
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary, #111)" }}>{name}</div>
-                      <div style={{ fontSize: 12, color: isToday ? "#1D9E75" : "var(--text-muted, #888)", marginTop: 3 }}>
-                        {isToday ? "✓ " : "🕐 "}{dateLabel}
-                      </div>
+                  <div key={i} style={{ background:"var(--surface,#fff)", border:"1px solid var(--border,#eee)", borderLeft:`3px solid ${done?"#1D9E75":lastDate?"var(--brand-light,#b8896a)":"var(--border,#eee)"}`, borderRadius:12, padding:"12px 14px", display:"flex", alignItems:"center", gap:10 }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:14, fontWeight:600, color:"var(--text-primary,#111)" }}>{name}</div>
+                      <div style={{ fontSize:12, color:done?"#1D9E75":"var(--text-muted,#888)", marginTop:2 }}>{done?"✓ ":"🕐 "}{getDateLabel(lastDate)}</div>
                     </div>
-                    <button
-                      onClick={() => setRestockModal({ supplierName: name, currentDate: lastDate })}
-                      style={{
-                        fontSize: 12, padding: "7px 14px", borderRadius: 8, cursor: "pointer",
-                        border: `1px solid ${isToday ? "#9FE1CB" : "var(--border, #ddd)"}`,
-                        background: isToday ? "#E1F5EE" : "var(--surface2, #f7f7f7)",
-                        color: isToday ? "#0F6E56" : "var(--text-primary, #111)",
-                        fontWeight: 500, whiteSpace: "nowrap",
-                      }}>
-                      {isToday ? (t.isZH ? "已收货 ✓" : "Done ✓") : (t.isZH ? "标记收货" : "Mark Restock")}
-                    </button>
+                    <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                      {!done ? (
+                        <button onClick={() => handleSupplierRestock(name, todayFormatted)}
+                          style={{ fontSize:12, padding:"7px 14px", borderRadius:8, cursor:"pointer", border:"1px solid var(--brand-pale,#edddd2)", background:"var(--brand-ghost,#f7f0eb)", color:"var(--brand-mid,#7a4a2e)", fontWeight:600, whiteSpace:"nowrap" }}>
+                          {t.isZH?"今日收货":"Received Today"}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize:12, padding:"7px 12px", borderRadius:8, background:"#E1F5EE", color:"#0F6E56", fontWeight:600 }}>✓ {t.isZH?"已收货":"Done"}</span>
+                      )}
+                      <button onClick={() => setRestockModal({ supplierName:name, currentDate:lastDate, isItem:false })}
+                        style={{ fontSize:12, padding:"7px 10px", borderRadius:8, cursor:"pointer", border:"1px solid var(--border,#ddd)", background:"var(--surface2,#f7f7f7)", color:"var(--text-muted,#888)" }}>
+                        {t.isZH?"改":"Edit"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -598,45 +653,42 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
       {/* ── Restock date modal ── */}
       {restockModal && (() => {
-        const today = new Date();
-        const pad = n => String(n).padStart(2,"0");
+        const today = new Date(); const pad = n => String(n).padStart(2,"0");
         const todayVal = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+        async function confirmEdit() {
+          const input = document.getElementById("supplier-restock-date");
+          if (!input?.value) return;
+          const [y,m,d] = input.value.split("-");
+          const formatted = `${d}/${m}/${y}`;
+          if (restockModal.isItem) {
+            const { doc, setDoc } = await import("firebase/firestore");
+            const key = `${restockModal.supplierName}__${restockModal.itemName}`;
+            await setDoc(doc(db, "freshDates", key), { date:formatted, category:restockModal.supplierName, name:restockModal.itemName });
+          } else {
+            handleSupplierRestock(restockModal.supplierName, formatted);
+          }
+          setRestockModal(null);
+        }
         return (
           <div style={{ position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.45)", display:"flex", alignItems:"flex-end", justifyContent:"center" }} onClick={() => setRestockModal(null)}>
-            <div onClick={e=>e.stopPropagation()} style={{ background:"var(--bg,#fff)", width:"100%", maxWidth:520, borderRadius:"16px 16px 0 0", padding:"24px 20px 32px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-                <span style={{ fontWeight:600, fontSize:17 }}>📦 {restockModal.supplierName}</span>
+            <div onClick={e=>e.stopPropagation()} style={{ background:"var(--surface,#fff)", width:"100%", maxWidth:520, borderRadius:"16px 16px 0 0", padding:"24px 20px 32px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
+                <span style={{ fontWeight:600, fontSize:17 }}>📦 {restockModal.itemName || restockModal.supplierName}</span>
                 <button onClick={() => setRestockModal(null)} style={{ background:"none", border:"none", fontSize:22, cursor:"pointer", color:"#888" }}>×</button>
               </div>
-              {restockModal.currentDate && (
-                <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:12 }}>
-                  {t.isZH ? `上次收货：${restockModal.currentDate}` : `Last restock: ${restockModal.currentDate}`}
-                </div>
-              )}
-              <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:8 }}>{t.isZH ? "收货日期" : "Restock Date"}</div>
-              <input
-                type="date"
-                defaultValue={todayVal}
-                id="supplier-restock-date"
-                style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", borderRadius:8, border:"1.5px solid var(--border,#ddd)", fontSize:15, marginBottom:18, background:"var(--surface2,#f5f5f5)", color:"var(--text-primary,#111)" }}
-              />
+              {restockModal.currentDate && <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:12 }}>{t.isZH?`目前记录：${restockModal.currentDate}`:`Current: ${restockModal.currentDate}`}</div>}
+              <div style={{ fontSize:12, color:"var(--text-muted,#888)", marginBottom:8 }}>{t.isZH?"修改收货日期":"Change Date"}</div>
+              <input type="date" defaultValue={todayVal} id="supplier-restock-date"
+                style={{ width:"100%", boxSizing:"border-box", padding:"10px 12px", borderRadius:8, border:"1.5px solid var(--border,#ddd)", fontSize:15, marginBottom:18, background:"var(--surface2,#f5f5f5)", color:"var(--text-primary,#111)" }} />
               <div style={{ display:"flex", gap:10 }}>
-                <button onClick={() => setRestockModal(null)} style={{ flex:1, padding:12, borderRadius:10, border:"1.5px solid var(--border,#ddd)", background:"var(--surface2,#f5f5f5)", fontSize:14, cursor:"pointer" }}>
-                  {t.cancelBtn}
-                </button>
-                <button onClick={() => {
-                  const input = document.getElementById("supplier-restock-date");
-                  if (!input?.value) return;
-                  const [y,m,d] = input.value.split("-");
-                  handleSupplierRestock(restockModal.supplierName, `${d}/${m}/${y}`);
-                }} style={{ flex:1, padding:12, borderRadius:10, background:"#3d2314", color:"#fff", fontSize:14, fontWeight:600, border:"none", cursor:"pointer" }}>
-                  {t.isZH ? "确认收货" : "Confirm"}
-                </button>
+                <button onClick={() => setRestockModal(null)} style={{ flex:1, padding:12, borderRadius:10, border:"1.5px solid var(--border,#ddd)", background:"var(--surface2,#f5f5f5)", fontSize:14, cursor:"pointer" }}>{t.cancelBtn}</button>
+                <button onClick={confirmEdit} style={{ flex:1, padding:12, borderRadius:10, background:"#3d2314", color:"#fff", fontSize:14, fontWeight:600, border:"none", cursor:"pointer" }}>{t.isZH?"确认修改":"Confirm"}</button>
               </div>
             </div>
           </div>
         );
       })()}
+
 
       {/* ── Modals 预订 ── */}
       {showAddRes && <Modal title={t.newReservation} onClose={() => setShowAddRes(false)}><ReservationForm onSave={handleAddRes} onCancel={() => setShowAddRes(false)} saving={saving} t={t} /></Modal>}
