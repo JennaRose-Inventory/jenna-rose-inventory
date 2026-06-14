@@ -81,58 +81,58 @@
 /* ── Dark mode ── */
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Backgrounds — deep grey with faint warmth */
-    --bg:        #111110;
-    --bg2:       #1a1917;
-    --surface:   #1e1d1b;
-    --surface2:  #242321;
-    --surface3:  #2a2927;
+    /* Backgrounds — pure dark, no colour cast */
+    --bg:        #0f0f0f;
+    --bg2:       #141414;
+    --surface:   #1a1a1a;
+    --surface2:  #202020;
+    --surface3:  #272727;
 
-    /* Borders — subtle warm grey */
-    --border:    #323130;
-    --border2:   #3d3c39;
+    /* Borders — subtle grey lines */
+    --border:    #2e2e2e;
+    --border2:   #3a3a3a;
 
-    /* Brand — warm amber-orange, visible on dark */
-    --brand:       #d4845a;
-    --brand-soft:  #c4744a;
-    --brand-mid:   #d4845a;
-    --brand-light: #e09a78;
-    --brand-pale:  #3a2316;
-    --brand-ghost: #251812;
+    /* Brand — muted warm tone, only for key actions */
+    --brand:       #c8784a;
+    --brand-soft:  #b86a3e;
+    --brand-mid:   #c8784a;
+    --brand-light: #d4946a;
+    --brand-pale:  #2a1a10;
+    --brand-ghost: #1e1208;
 
-    /* Semantic — softer, less saturated for dark bg */
-    --green-700:  #6ee7a0;
-    --green-600:  #6ee7a0;
-    --green-500:  #6ee7a0;
-    --green-100:  #0d3320;
-    --green-50:   #081c12;
+    /* Semantic — visible but not garish */
+    --green-700:  #5cb87a;
+    --green-600:  #5cb87a;
+    --green-500:  #5cb87a;
+    --green-100:  #0e2a18;
+    --green-50:   #081610;
 
-    --red-700:    #fca5a5;
-    --red-600:    #fca5a5;
-    --red-500:    #fca5a5;
-    --red-100:    #4c1616;
-    --red-50:     #2a0c0c;
+    --red-700:    #e06060;
+    --red-600:    #e06060;
+    --red-500:    #e06060;
+    --red-100:    #3a1010;
+    --red-50:     #200808;
 
-    --amber-600:  #fcd34d;
-    --amber-500:  #fcd34d;
-    --amber-100:  #4a2a08;
-    --amber-50:   #281606;
+    --amber-600:  #d4a843;
+    --amber-500:  #d4a843;
+    --amber-100:  #352408;
+    --amber-50:   #1e1404;
 
-    --blue-600:   #93c5fd;
-    --blue-100:   #172445;
-    --blue-50:    #0d1628;
+    --blue-600:   #7aaadc;
+    --blue-100:   #122030;
+    --blue-50:    #0a1420;
 
-    /* Typography — warm white, easy on eyes */
-    --text-primary:   #eeece8;
-    --text-secondary: #b0aca6;
-    --text-muted:     #706c66;
-    --text-faint:     #4a4742;
+    /* Typography — pure white hierarchy, easy to read */
+    --text-primary:   #f0f0f0;
+    --text-secondary: #aaaaaa;
+    --text-muted:     #666666;
+    --text-faint:     #444444;
 
     /* Shadows */
-    --shadow-xs:  0 1px 3px rgba(0,0,0,0.4);
-    --shadow-sm:  0 2px 6px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.3);
-    --shadow-md:  0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
-    --shadow-lg:  0 12px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.35);
+    --shadow-xs:  0 1px 3px rgba(0,0,0,0.5);
+    --shadow-sm:  0 2px 8px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.4);
+    --shadow-md:  0 4px 16px rgba(0,0,0,0.6), 0 1px 4px rgba(0,0,0,0.4);
+    --shadow-lg:  0 12px 32px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.5);
   }
 }
 
