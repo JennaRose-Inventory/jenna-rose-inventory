@@ -572,9 +572,12 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
         async function cancelItemToday(category, itemName) {
           const mapKey = `${category}||${itemName}`;
-          const prevDate = localFreshMap[`__prev__${mapKey}`] ?? null;
-          if (prevDate) {
-            // Restore previous date
+          // Check local prev first, then fall back to freshMap (handles post-refresh case)
+          const prevDate = localFreshMap[`__prev__${mapKey}`] ?? freshMap[mapKey] ?? null;
+          // Only restore if prevDate is not today (otherwise we'd just re-mark today)
+          const prevIsToday = prevDate ? isToday(prevDate) : false;
+          if (prevDate && !prevIsToday) {
+            // Restore previous date immediately
             setLocalFreshMap(prev => {
               const n = {...prev};
               n[mapKey] = prevDate;
@@ -584,7 +587,7 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
             const { doc, setDoc } = await import("firebase/firestore");
             await setDoc(doc(db, "freshDates", `${category}__${itemName}`), { date: prevDate, category, name: itemName });
           } else {
-            // No previous — delete
+            // No valid previous date — delete record
             setLocalFreshMap(prev => { const n={...prev}; delete n[mapKey]; delete n[`__prev__${mapKey}`]; return n; });
             const { doc, deleteDoc } = await import("firebase/firestore");
             await deleteDoc(doc(db, "freshDates", `${category}__${itemName}`));
