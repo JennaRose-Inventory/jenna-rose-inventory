@@ -242,7 +242,7 @@ function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
 }
 
 // ── Main Overview Page ────────────────────────────────────────────────────────
-export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord, onUpdateRecord, freshMap = {}, onFreshDate, items = [] }) {
+export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord, onUpdateRecord, freshMap = {}, onFreshDate, items = [], supplierFreshMap = {} }) {
   const [orderModal, setOrderModal] = useState(null);
   const [editModal,  setEditModal]  = useState(null);
   const isZH = t.appSub === "库存系统";
