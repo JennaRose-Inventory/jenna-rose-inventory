@@ -68,14 +68,8 @@
   /* ── Layout ── */
   --nav-h: 64px;
   --top-h: 54px;
-
-/* Safe area support for iOS notch/dynamic island */
-@supports (padding-top: env(safe-area-inset-top)) {
-  :root {
-    --safe-top:    env(safe-area-inset-top);
-    --safe-bottom: env(safe-area-inset-bottom);
-  }
-}
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 
@@ -152,7 +146,7 @@ input:focus, select:focus {
 }
 input[type=number]::-webkit-inner-spin-button,
 input[type=number]::-webkit-outer-spin-button { display: none; }
-input[type=number] { -moz-appearance: textfield; }
+input[type=number] { -moz-appearance: textfield; appearance: textfield; }
 input[type=number] { font-variant-numeric: slashed-zero tabular-nums; }
 
 /* ── Selection ── */

@@ -379,7 +379,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
               const freshDays  = itemConfig?.freshDays ?? 0;
               const daysOld    = freshDays > 0 ? daysSinceRestock(key, freshMap) : null;
               const freshWarn  = freshDays > 0 && daysOld !== null && daysOld >= freshDays;
-              const hasLatestStock = latestVal !== undefined && latestVal !== "" && latestVal !== "0" && Number(latestVal) > 0;
+              const hasRestockDate = !!freshMap[key]; // show restock badge whenever date exists
               return (
                 <div key={idx} style={{ borderBottom: idx < groupedItems[category].length - 1 ? "1px solid var(--border)" : "none" }}>
                   <div style={{ display:"flex", alignItems:"center", padding:"9px 14px", background: freshWarn ? "rgba(251,191,36,0.06)" : "transparent" }}>
@@ -389,7 +389,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                         {item.name}
                         {low && <span style={{ fontSize:"11px", lineHeight:1 }}>⚠️</span>}
                       </div>
-                      {freshDays > 0 && daysOld !== null && hasLatestStock && (
+                      {freshDays > 0 && hasRestockDate && (
                         <div style={{ marginTop:"3px" }}>
                           <span style={{
                             fontSize:"10px", fontWeight:600,
