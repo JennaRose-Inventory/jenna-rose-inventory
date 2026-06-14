@@ -218,13 +218,13 @@ export default function App() {
   ])];
 
   const NAV = [
-    { id:"Count",        iconName:"count",    label:t.navCount,                                            depts:["frontend","kitchen"], adminOnly:false },
-    { id:"Overview",     iconName:"overview", label:t.navOverview,                                         depts:["frontend","kitchen"], adminOnly:false },
-    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "操作" : "Operations",      depts:["frontend"],            adminOnly:false },
-    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "运营" : "Operations",      depts:["frontend","kitchen"],  adminOnly:true  },
-    { id:"History",      iconName:"history",  label:t.appSub === "库存系统" ? "历史" : "History",         depts:["frontend","kitchen"],  adminOnly:false },
-    { id:"Manage",       iconName:"manage",   label:t.navManage,                                           depts:["frontend","kitchen"],  adminOnly:false },
-  ].filter(n => n.depts.includes(dept || "frontend") && (!n.adminOnly || owner));
+    { id:"Count",        iconName:"count",    label:t.navCount,                                          depts:["frontend","kitchen"] },
+    { id:"Overview",     iconName:"overview", label:t.navOverview,                                       depts:["frontend","kitchen"] },
+    { id:"History",      iconName:"history",  label:t.navHistory,                                        depts:["frontend","kitchen"] },
+    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "仪表盘" : "Dashboard",   depts:["frontend","kitchen"] },
+    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "预定" : "Schedule",      depts:["frontend"] },
+    { id:"Manage",       iconName:"manage",   label:t.navManage,                                         depts:["frontend","kitchen"] },
+  ].filter(n => n.depts.includes(dept || "frontend"));
 
   function navigateTo(id) {
     const navIds = NAV.map(n => n.id);
@@ -417,11 +417,16 @@ export default function App() {
     // ── Load fresh dates ───────────────────────────────────────────────────────
     try {
       const freshSnap = await getDocs(collection(db, "freshDates"));
-      const map = {};
+      const map = {}; const smap = {};
       freshSnap.docs.forEach(d => {
-        map[d.id.replace(/__/g, "||")] = d.data().date;
+        if (d.id.startsWith("supplier__")) {
+          smap[d.id.replace("supplier__", "")] = d.data().date;
+        } else {
+          map[d.id.replace(/__/g, "||")] = d.data().date;
+        }
       });
       setFreshMap(map);
+      setSupplierFreshMap(smap);
     } catch {}
 
     setCounts({});
@@ -659,11 +664,11 @@ export default function App() {
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
         <div key={animKey} className={slideDir === "right" ? "page-slide-right" : "page-slide-left"}>
         {page === "Count"       && <CountPage       t={t} items={activeItems} counts={counts} onCountChange={handleCountChange} onSave={saveInventory} onClearCounts={clearAllCounts} historyData={deptHistory} todayRecord={todayRecord} todayCount={todayRecords.length} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
-        {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} />}
+        {page === "Overview"    && <OverviewPage    t={t} historyData={deptHistory} suppliers={activeSuppliers} onDeleteRecord={deleteRecord} onUpdateRecord={updateRecord} freshMap={freshMap} onFreshDate={saveFreshDate} items={activeItems} supplierFreshMap={supplierFreshMap} />}
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} suppliers={activeSuppliers} freshMap={freshMap} />}
         {page === "Dashboard"   && <NewDashboardPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} />}
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
-        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} suppliers={activeSuppliers} freshMap={freshMap} onFreshDate={saveFreshDate} />}
+        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} />}
         {page === "Debug"        && owner      && <DebugPage />}
         </div>
       </div>

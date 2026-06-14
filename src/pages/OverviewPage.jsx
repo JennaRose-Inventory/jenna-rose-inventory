@@ -346,9 +346,25 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
       return (
         <div key={category} style={{ marginBottom:"16px" }}>
           <div style={{ display:"flex", alignItems:"center", padding:"0 2px", marginBottom:"6px" }}>
-            <span style={{ flex:1, fontSize:"10.5px", fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"var(--text-faint)" }}>
-              {category}
-            </span>
+            <div style={{ flex:1, display:"flex", alignItems:"center", gap:6 }}>
+              <span style={{ fontSize:"10.5px", fontWeight:700, letterSpacing:"0.07em", textTransform:"uppercase", color:"var(--text-faint)" }}>
+                {category}
+              </span>
+              {supplierFreshMap[category] && (() => {
+                const d = supplierFreshMap[category];
+                const [dd,mm,yy] = d.split("/").map(Number);
+                const now = new Date();
+                const isToday = dd===now.getDate()&&mm===now.getMonth()+1&&yy===now.getFullYear();
+                const yest = new Date(); yest.setDate(yest.getDate()-1);
+                const isYest = dd===yest.getDate()&&mm===yest.getMonth()+1&&yy===yest.getFullYear();
+                const label = isToday?(isZH?"今天收货":"Today"):isYest?(isZH?"昨天收货":"Yesterday"):`${dd}/${mm}`;
+                return (
+                  <span style={{ fontSize:"9px", fontWeight:500, padding:"1px 6px", borderRadius:99, background:isToday?"#E1F5EE":"var(--surface2)", color:isToday?"#0F6E56":"var(--text-muted)", border:`1px solid ${isToday?"#9FE1CB":"var(--border)"}` }}>
+                    📦 {label}
+                  </span>
+                );
+              })()}
+            </div>
             {supplier && (
               <div style={{ display:"flex", gap:"5px" }}>
                 {dayRecords.map((rec, i) => (

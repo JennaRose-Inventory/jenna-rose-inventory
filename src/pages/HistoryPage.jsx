@@ -8,7 +8,7 @@ function shortDate(dateStr) {
   return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : dateStr;
 }
 
-export default function HistoryPage({ t, historyData, freshMap = {} }) {
+export default function HistoryPage({ t, historyData, freshMap = {}, supplierFreshMap = {} }) {
   const records = historyData.slice(0, 14);
   const isZH = t.appSub === "库存系统";
 
@@ -88,6 +88,26 @@ export default function HistoryPage({ t, historyData, freshMap = {} }) {
           </button>
         ))}
       </div>
+
+      {/* Supplier restock date */}
+      {supplierFreshMap[activeTab] && (() => {
+        const d = supplierFreshMap[activeTab];
+        const [dd,mm,yy] = d.split("/").map(Number);
+        const now = new Date();
+        const isToday = dd===now.getDate()&&mm===now.getMonth()+1&&yy===now.getFullYear();
+        const yest = new Date(); yest.setDate(yest.getDate()-1);
+        const isYest = dd===yest.getDate()&&mm===yest.getMonth()+1&&yy===yest.getFullYear();
+        const label = isToday?(isZH?"今天收货":"Received today"):isYest?(isZH?"昨天收货":"Yesterday"): (isZH?`收货 ${d}`:d);
+        return (
+          <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px", marginBottom:10, borderRadius:"var(--radius-md)", background:isToday?"#E1F5EE":"var(--surface)", border:`1px solid ${isToday?"#9FE1CB":"var(--border)"}` }}>
+            <span style={{ fontSize:14 }}>📦</span>
+            <div>
+              <div style={{ fontSize:12, fontWeight:600, color:isToday?"#0F6E56":"var(--text-primary)" }}>{isZH?"最新收货日期":"Last Restock"}</div>
+              <div style={{ fontSize:11, color:isToday?"#1D9E75":"var(--text-muted)", marginTop:1 }}>{label}</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Items */}
       {Object.keys(filtered).length === 0 ? (
