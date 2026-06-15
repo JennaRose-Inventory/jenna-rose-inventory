@@ -373,15 +373,19 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   }
 
   function handleDelete() {
-    if (!window.confirm(isZH ? `确定删除 "${selCat}" 供应商？` : `Delete supplier "${selCat}"?`)) return;
+    if (!window.confirm(isZH ? `确定删除 "${selCat}" 供应商？此操作也会同时隐藏该供应商下所有项目。` : `Delete supplier "${selCat}"? All items under this supplier will also be archived.`)) return;
+    // Remove supplier
     const updated = { ...suppliers };
     delete updated[selCat];
     onUpdateSuppliers(updated);
+    // Archive all items under this supplier
+    const archivedItems = items.map(i => i.category === selCat ? { ...i, active: false } : i);
+    setItems(archivedItems);
     const remaining = Object.keys(updated);
     const next = remaining[0] ?? "";
     setSelCat(next);
     if (next) setForm(buildForm(next));
-    onToast(isZH ? `"${selCat}" 已删除` : `"${selCat}" deleted`, "info");
+    onToast(isZH ? `"${selCat}" 已删除，相关项目已隐藏` : `"${selCat}" deleted and items archived`, "info");
   }
 
   function handleAddSupplier() {
