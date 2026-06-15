@@ -328,11 +328,14 @@ export default function App() {
   // Real-time staff account monitoring — kick out immediately if disabled
   useEffect(() => {
     if (!auth?.username) return;
+    // Admins (Kelvin, Jenn) are not in the staff collection — skip monitoring
+    if (isAdmin(auth.username)) return;
     let unsub;
     import("firebase/firestore").then(({ onSnapshot, doc: fsDoc }) => {
       const ref = fsDoc(db, "staff", auth.username.toLowerCase());
       unsub = onSnapshot(ref, (snap) => {
-        if (!snap.exists()) { handleLogout(); return; }
+        // If doc doesn't exist, don't kick out (may be loading)
+        if (!snap.exists()) return;
         const data = snap.data();
         if (data.active === false || data.disabled === true) {
           handleLogout();
