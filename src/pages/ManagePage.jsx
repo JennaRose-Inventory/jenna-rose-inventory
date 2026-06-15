@@ -47,7 +47,7 @@ function Accordion({ icon, title, desc, open, onToggle, children }) {
 }
 
 // ── Items section ─────────────────────────────────────────────────────────────
-function ItemsSection({ t, items, setItems, allCategories, onToast }) {
+function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = {} }) {
   const isZH = t.appSub === "库存系统";
   const firstActive = items.find((i) => i.active !== false);
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
@@ -224,7 +224,7 @@ function ItemsSection({ t, items, setItems, allCategories, onToast }) {
         <div style={L}>{t.category}</div>
         <div style={{ marginBottom: "10px" }}>
           <Select value={newItem.category} onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            {[...new Set([...allCategories, ...Object.keys(suppliers)])].sort().map((c) => <option key={c} value={c}>{c}</option>)}
           </Select>
         </div>
         <div style={L}>{t.itemName}</div>
@@ -755,7 +755,7 @@ export default function ManagePage({ t, items, setItems, allCategories, onToast,
       </div>
 
       {activeTab === "items" && (
-        <ItemsSection t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={onToast} />
+        <ItemsSection t={t} items={items} setItems={setItems} allCategories={allCategories} onToast={onToast} suppliers={suppliers} />
       )}
       {activeTab === "supplier" && (
         <>
