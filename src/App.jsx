@@ -214,7 +214,7 @@ export default function App() {
   const activeSuppliers = isKitchen ? kSuppliers : suppliers;
 
   const allCategories = [...new Set([
-    ...activeItems.map((i) => i.category),
+    ...activeItems.filter(i => i.active !== false).map((i) => i.category),
     ...Object.keys(activeSuppliers),
   ])];
 
