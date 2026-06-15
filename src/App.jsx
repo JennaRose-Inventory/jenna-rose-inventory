@@ -325,6 +325,23 @@ export default function App() {
     setCounts({});
   }
 
+  // Real-time staff account monitoring — kick out immediately if disabled
+  useEffect(() => {
+    if (!auth?.username) return;
+    let unsub;
+    import("firebase/firestore").then(({ onSnapshot, doc: fsDoc }) => {
+      const ref = fsDoc(db, "staff", auth.username.toLowerCase());
+      unsub = onSnapshot(ref, (snap) => {
+        if (!snap.exists()) { handleLogout(); return; }
+        const data = snap.data();
+        if (data.active === false || data.disabled === true) {
+          handleLogout();
+        }
+      });
+    });
+    return () => { if (unsub) unsub(); };
+  }, [auth?.username]);
+
   function handleNameDone(name) {
     if (auth) {
       setStoredAuth({ ...auth, name });
