@@ -331,12 +331,12 @@ export default function App() {
     // Admins (Kelvin, Jenn) are not in the staff collection — skip monitoring
     if (isAdmin(auth.username)) return;
     let unsub;
-    import("firebase/firestore").then(({ onSnapshot, doc: fsDoc }) => {
-      const ref = fsDoc(db, "staff", auth.username.toLowerCase());
-      unsub = onSnapshot(ref, (snap) => {
-        // If doc doesn't exist, don't kick out (may be loading)
-        if (!snap.exists()) return;
-        const data = snap.data();
+    import("firebase/firestore").then(({ onSnapshot, collection, query, where }) => {
+      // Query by username field since doc ID is random
+      const q = query(collection(db, "staff"), where("username", "==", auth.username.toLowerCase()));
+      unsub = onSnapshot(q, (snap) => {
+        if (snap.empty) return; // doc not found, don't kick
+        const data = snap.docs[0].data();
         if (data.active === false || data.disabled === true) {
           handleLogout();
         }
