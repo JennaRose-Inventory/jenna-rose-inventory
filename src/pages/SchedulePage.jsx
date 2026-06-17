@@ -9,6 +9,7 @@ import {
 } from "../services/reminderService";
 import { db } from "../firebase";
 import { collection, doc, setDoc, onSnapshot, orderBy, query } from "firebase/firestore";
+import { getAppDate } from "../utils/helpers.js";
 
 // ─── 翻译 ──────────────────────────────────────────────────────────────────────
 function useT(lang) {
@@ -533,19 +534,23 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
       {section === "restock" && (() => {
         const ITEM_LEVEL = ["RV Bakery", "千层蛋糕"];
         const supplierNames = Object.keys(suppliers).filter(n => !ITEM_LEVEL.includes(n));
+        // "营业日" — 凌晨6点前算昨天，跟 Count 页面的逻辑保持一致
         const todayFormatted = (() => {
-          const now = new Date(); const pad = n => String(n).padStart(2,"0");
-          return `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()}`;
+          const [dd, mm, yyyy] = getAppDate().split("/"); // en-GB → DD/MM/YYYY
+          return `${dd}/${mm}/${yyyy}`;
         })();
         function isToday(dateStr) {
           if (!dateStr) return false;
-          const [d,m,y] = dateStr.split("/").map(Number); const now = new Date();
-          return d===now.getDate() && m===now.getMonth()+1 && y===now.getFullYear();
+          return dateStr === todayFormatted;
         }
         function isYesterday(dateStr) {
           if (!dateStr) return false;
-          const [d,m,y] = dateStr.split("/").map(Number); const yest = new Date(); yest.setDate(yest.getDate()-1);
-          return d===yest.getDate() && m===yest.getMonth()+1 && y===yest.getFullYear();
+          const [d, m, y] = todayFormatted.split("/").map(Number);
+          const yest = new Date(y, m - 1, d);
+          yest.setDate(yest.getDate() - 1);
+          const pad = n => String(n).padStart(2, "0");
+          const yestFormatted = `${pad(yest.getDate())}/${pad(yest.getMonth() + 1)}/${yest.getFullYear()}`;
+          return dateStr === yestFormatted;
         }
         function getDateLabel(dateStr) {
           if (!dateStr) return t.isZH ? "从未记录" : "Never recorded";
@@ -721,8 +726,8 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
       {/* ── Restock date modal ── */}
       {restockModal && (() => {
-        const today = new Date(); const pad = n => String(n).padStart(2,"0");
-        const todayVal = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+        const [appD, appM, appY] = getAppDate().split("/");
+        const todayVal = `${appY}-${appM}-${appD}`; // en-GB DD/MM/YYYY → input[type=date] YYYY-MM-DD
         async function confirmEdit() {
           const input = document.getElementById("supplier-restock-date");
           if (!input?.value) return;
