@@ -64,7 +64,7 @@ function useT(lang) {
     status:        isZH ? "状态"          : "Status",
     title:         isZH ? "标题 *"        : "Title *",
     description:   isZH ? "说明"          : "Description",
-    remindAt:      isZH ? "提醒时间 *"    : "Remind at *",
+    remindAt:      isZH ? "日期与时间 *"  : "Date & Time *",
     notesPlaceholder: isZH ? "生日、过敏、特殊要求…" : "Birthday, allergy, special request…",
     titlePlaceholder: isZH ? "例：买牛奶、员工会议" : "e.g. Buy Milk, Staff Meeting",
     descPlaceholder:  isZH ? "补充说明…"  : "Additional details…",
@@ -207,6 +207,111 @@ function ReminderForm({ initial = EMPTY_REM, onSave, onCancel, saving, t }) {
   );
 }
 
+// ─── Dashboard strip ──────────────────────────────────────────────────────────
+function DashboardStrip({ reservations, reminders, lang, onResClick, onRemClick }) {
+  const isZH = lang === "zh";
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const tomorrowStr = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
+  const todayRes  = reservations.filter(r => r.reservationDate === todayStr  && r.status !== "cancelled").sort((a,b)=>a.reservationTime>b.reservationTime?1:-1);
+  const tmrwRes   = reservations.filter(r => r.reservationDate === tomorrowStr && r.status !== "cancelled");
+  const overdueRem = reminders.filter(r => !r.completed && r.reminderAt && (r.reminderAt.toDate ? r.reminderAt.toDate() : new Date(r.reminderAt)) < new Date());
+  const upcomingRem = reminders.filter(r => !r.completed && r.reminderAt && (r.reminderAt.toDate ? r.reminderAt.toDate() : new Date(r.reminderAt)) >= new Date()).sort((a,b)=>{
+    const da = a.reminderAt.toDate ? a.reminderAt.toDate() : new Date(a.reminderAt);
+    const db2 = b.reminderAt.toDate ? b.reminderAt.toDate() : new Date(b.reminderAt);
+    return da - db2;
+  }).slice(0, 2);
+
+  const todayLabel = isZH
+    ? new Date().toLocaleDateString("zh-MY", { month:"long", day:"numeric", weekday:"short" })
+    : new Date().toLocaleDateString("en-MY", { weekday:"short", day:"numeric", month:"short" });
+
+  function fmt12h(time) {
+    if (!time) return "";
+    const [h, m] = time.split(":").map(Number);
+    return `${((h+11)%12)+1}:${String(m).padStart(2,"0")}${h>=12?"pm":"am"}`;
+  }
+  function fmtRemTime(ts) {
+    if (!ts) return "";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    const now = new Date();
+    const diffH = (d - now) / 3600000;
+    if (diffH < 0) return isZH ? "已逾期" : "overdue";
+    if (diffH < 1) return isZH ? `${Math.round(diffH*60)}分钟后` : `in ${Math.round(diffH*60)}m`;
+    if (diffH < 24) return isZH ? `${Math.round(diffH)}小时后` : `in ${Math.round(diffH)}h`;
+    return d.toLocaleDateString(isZH?"zh-MY":"en-MY", { day:"numeric", month:"short" });
+  }
+
+  const hasAnything = todayRes.length > 0 || tmrwRes.length > 0 || overdueRem.length > 0 || upcomingRem.length > 0;
+  if (!hasAnything) return (
+    <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:16, padding:"16px 16px", marginBottom:18, display:"flex", alignItems:"center", gap:12 }}>
+      <div style={{ fontSize:28 }}>☀️</div>
+      <div>
+        <div style={{ fontWeight:700, fontSize:14, color:"var(--text-primary)" }}>{todayLabel}</div>
+        <div style={{ fontSize:12, color:"var(--text-faint)", marginTop:2 }}>{isZH ? "今天没有预订或提醒" : "No reservations or reminders today"}</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ background:"var(--surface)", border:"1px solid var(--border)", borderRadius:18, padding:"16px 16px 14px", marginBottom:18, boxShadow:"var(--shadow-xs)" }}>
+      {/* Date header */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:14 }}>
+        <div style={{ fontWeight:700, fontSize:14, color:"var(--text-primary)", letterSpacing:"-0.01em" }}>
+          {isZH ? "📅 今天 · " : "📅 Today · "}{todayLabel}
+        </div>
+        {tmrwRes.length > 0 && (
+          <div style={{ fontSize:11, color:"var(--text-muted)", background:"var(--surface2)", padding:"3px 9px", borderRadius:20, fontWeight:500 }}>
+            {isZH ? `明天 +${tmrwRes.length}` : `tmrw +${tmrwRes.length}`}
+          </div>
+        )}
+      </div>
+
+      {/* Today's reservations */}
+      {todayRes.length > 0 && (
+        <div style={{ display:"flex", gap:8, overflowX:"auto", scrollbarWidth:"none", marginBottom: (overdueRem.length > 0 || upcomingRem.length > 0) ? 12 : 0, paddingBottom:2 }}>
+          {todayRes.map(r => (
+            <button key={r.id} onClick={onResClick} style={{ flexShrink:0, background: r.status==="completed" ? "var(--surface2)" : "linear-gradient(135deg,#1a6b50,#1D9E75)", borderRadius:14, padding:"10px 13px", textAlign:"left", border:"none", cursor:"pointer", minWidth:100 }}>
+              <div style={{ fontSize:13, fontWeight:800, color: r.status==="completed" ? "var(--text-muted)" : "#fff" }}>{fmt12h(r.reservationTime)}</div>
+              <div style={{ fontSize:12, fontWeight:600, color: r.status==="completed" ? "var(--text-secondary)" : "rgba(255,255,255,0.9)", marginTop:2, maxWidth:90, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{r.customerName}</div>
+              <div style={{ fontSize:11, color: r.status==="completed" ? "var(--text-faint)" : "rgba(255,255,255,0.65)", marginTop:1 }}>{r.pax} {isZH?"人":"pax"}</div>
+            </button>
+          ))}
+          {todayRes.length === 0 && (
+            <div style={{ fontSize:13, color:"var(--text-faint)", padding:"8px 0" }}>{isZH?"今天没有预订":"No reservations today"}</div>
+          )}
+        </div>
+      )}
+
+      {/* Reminders */}
+      {(overdueRem.length > 0 || upcomingRem.length > 0) && (
+        <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+          {overdueRem.length > 0 && (
+            <button onClick={onRemClick} style={{ display:"flex", alignItems:"center", gap:10, background:"#fff5f5", border:"1px solid #fcd0d0", borderRadius:10, padding:"9px 12px", cursor:"pointer", textAlign:"left", width:"100%" }}>
+              <span style={{ fontSize:15 }}>⚠️</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#c0392b" }}>{overdueRem.length} {isZH ? "个逾期提醒" : `overdue reminder${overdueRem.length>1?"s":""}`}</div>
+                <div style={{ fontSize:11, color:"#e07070", marginTop:1 }}>{overdueRem[0]?.title}</div>
+              </div>
+              <span style={{ fontSize:12, color:"#c0392b" }}>›</span>
+            </button>
+          )}
+          {upcomingRem.map(r => (
+            <button key={r.id} onClick={onRemClick} style={{ display:"flex", alignItems:"center", gap:10, background:"var(--surface2)", border:"1px solid var(--border)", borderLeft:"3px solid #534AB7", borderRadius:10, padding:"9px 12px", cursor:"pointer", textAlign:"left", width:"100%" }}>
+              <span style={{ fontSize:14 }}>🔔</span>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:12, fontWeight:600, color:"var(--text-primary)" }}>{r.title}</div>
+                {r.description && <div style={{ fontSize:11, color:"var(--text-muted)", marginTop:1 }}>{r.description}</div>}
+              </div>
+              <div style={{ fontSize:11, color:"#534AB7", fontWeight:600, flexShrink:0 }}>{fmtRemTime(r.reminderAt)}</div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── 主页面 ────────────────────────────────────────────────────────────────────
 export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, onFreshDate }) {
   const t = useT(lang);
@@ -338,6 +443,15 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
 
   return (
     <div style={{ padding: "16px 16px 80px", maxWidth: 640, margin: "0 auto" }}>
+
+      {/* ── Dashboard strip ── */}
+      <DashboardStrip
+        reservations={reservations}
+        reminders={reminders}
+        lang={lang}
+        onResClick={() => setSection("reservations")}
+        onRemClick={() => setSection("reminders")}
+      />
 
       {/* ── 顶部切换 ── */}
       <div style={{ display: "flex", background: "var(--surface2, #f5f5f5)", borderRadius: 12, padding: 4, marginBottom: 20, gap: 4 }}>

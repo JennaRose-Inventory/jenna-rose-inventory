@@ -23,7 +23,9 @@ import NewDashboardPage from "./pages/NewDashboardPage.jsx";
 import ManagePage      from "./pages/ManagePage.jsx";
 import SchedulePage    from "./pages/SchedulePage.jsx";
 import DebugPage       from "./pages/DebugPage.jsx";
+import RecipePage      from "./pages/RecipePage.jsx";
 import { registerPushFunction } from "./services/notificationService.js";
+import { subscribeReminders } from "./services/reminderService.js";
 
 const MAX_HISTORY        = 14;
 const ITEMS_STORAGE_KEY  = "jr_items_v1";
@@ -202,6 +204,11 @@ export default function App() {
   const [supplierFreshMap, setSupplierFreshMap] = useState({});
   const [loading, setLoading]         = useState(true);
   const [toast, setToast]             = useState(null);
+  const [reminders, setReminders]     = useState([]);
+  const [dismissedBanners, setDismissedBanners] = useState(() => {
+    const _now = new Date(); const key = `jr_dismissed_banners_${_now.toISOString().slice(0,10)}_${Math.floor(_now.getHours()/4)}`;
+    try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); } catch { return new Set(); }
+  });
   const isOnline = useOnline();
   const t        = STRINGS[lang];
 
@@ -219,12 +226,13 @@ export default function App() {
   ])];
 
   const NAV = [
-    { id:"Count",        iconName:"count",    label:t.navCount,                                              depts:["frontend","kitchen"], adminOnly:false },
-    { id:"Overview",     iconName:"overview", label:t.navOverview,                                           depts:["frontend","kitchen"], adminOnly:false },
-    { id:"Schedule",     iconName:"calendar", label:t.appSub === "库存系统" ? "操作" : "Operations",        depts:["frontend"],            adminOnly:false },
-    { id:"Dashboard",    iconName:"stats",    label:t.appSub === "库存系统" ? "运营" : "Dashboard",         depts:["frontend","kitchen"],  adminOnly:true  },
-    { id:"History",      iconName:"history",  label:t.appSub === "库存系统" ? "历史" : "History",           depts:["frontend","kitchen"],  adminOnly:false },
-    { id:"Manage",       iconName:"manage",   label:t.navManage,                                             depts:["frontend","kitchen"],  adminOnly:false },
+    { id:"Count",    iconName:"count",    label:t.navCount,                                        depts:["frontend","kitchen"], adminOnly:false },
+    { id:"Overview", iconName:"overview", label:t.navOverview,                                     depts:["frontend","kitchen"], adminOnly:false },
+    { id:"Schedule", iconName:"calendar", label:t.appSub === "库存系统" ? "操作" : "Operations",  depts:["frontend"],            adminOnly:false },
+    { id:"Recipes",  iconName:"menu",     label:t.appSub === "库存系统" ? "菜单" : "Menu",         depts:["frontend"],            adminOnly:true },
+    { id:"Dashboard",iconName:"stats",    label:t.appSub === "库存系统" ? "运营" : "Dashboard",   depts:["frontend","kitchen"],  adminOnly:true  },
+    { id:"History",  iconName:"history",  label:t.appSub === "库存系统" ? "历史" : "History",     depts:["frontend","kitchen"],  adminOnly:false },
+    { id:"Manage",   iconName:"manage",   label:t.navManage,                                       depts:["frontend","kitchen"],  adminOnly:false },
   ].filter(n => n.depts.includes(dept || "frontend") && (!n.adminOnly || owner));
 
   function navigateTo(id) {
@@ -354,6 +362,10 @@ export default function App() {
   }
 
   useEffect(() => { loadAll(); }, []);
+  useEffect(() => {
+    const unsub = subscribeReminders(setReminders);
+    return unsub;
+  }, []);
 
   // Auto-refresh via ref to avoid stale closure — fix #2
   useEffect(() => {
@@ -681,6 +693,44 @@ export default function App() {
         </div>
       </div>
 
+      {/* Reminder banners */}
+      {!isKitchen && (() => {
+        const todayStr    = new Date().toISOString().slice(0,10);
+        const tomorrowStr = new Date(Date.now()+86400000).toISOString().slice(0,10);
+        const isZH        = lang === "zh";
+        const activeBanners = reminders.filter(r => {
+          if (r.completed || dismissedBanners.has(r.id)) return false;
+          const d = r.reminderAt?.toDate ? r.reminderAt.toDate() : r.reminderAt ? new Date(r.reminderAt) : null;
+          if (!d) return false;
+          const dStr = d.toISOString().slice(0,10);
+          return dStr === todayStr || dStr === tomorrowStr;
+        });
+        if (!activeBanners.length) return null;
+        return activeBanners.map(r => {
+          const d = r.reminderAt?.toDate ? r.reminderAt.toDate() : new Date(r.reminderAt);
+          const isToday = d.toISOString().slice(0,10) === todayStr;
+          const prefix  = isToday ? (isZH ? "今天" : "Today") : (isZH ? "明天" : "Tomorrow");
+          const msg     = isZH
+            ? `${prefix}：${r.title}，请注意`
+            : `${prefix}: ${r.title} — please note`;
+          return (
+            <div key={r.id} style={{ position:"fixed", top:"calc(var(--top-h) + var(--safe-top))", left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, zIndex:140, padding:"0 10px", pointerEvents:"none" }}>
+              <div style={{ background: isToday ? "#3d2314" : "#534AB7", color:"#fff", borderRadius:14, padding:"11px 14px 11px 16px", display:"flex", alignItems:"center", gap:10, boxShadow:"0 4px 20px rgba(0,0,0,0.2)", pointerEvents:"all", margin:"6px 0 0" }}>
+                <span style={{ fontSize:16 }}>{isToday ? "🔔" : "📅"}</span>
+                <span style={{ flex:1, fontSize:13, fontWeight:600, lineHeight:1.3 }}>{msg}</span>
+                <button onClick={() => setDismissedBanners(s => {
+                  const next = new Set([...s, r.id]);
+                  const _now = new Date(); const key = `jr_dismissed_banners_${_now.toISOString().slice(0,10)}_${Math.floor(_now.getHours()/4)}`;
+                  localStorage.setItem(key, JSON.stringify([...next]));
+                  return next;
+                })}
+                  style={{ background:"rgba(255,255,255,0.15)", border:"none", borderRadius:8, color:"#fff", width:26, height:26, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexShrink:0, fontSize:14 }}>×</button>
+              </div>
+            </div>
+          );
+        });
+      })()}
+
       {/* Page content */}
       <div style={{ flex:1, padding:"16px 14px", paddingBottom:`calc(var(--nav-h) + env(safe-area-inset-bottom) + 16px)`, overflowY:"auto" }}>
         <div key={animKey} className={slideDir === "right" ? "page-slide-right" : "page-slide-left"}>
@@ -691,6 +741,7 @@ export default function App() {
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
         {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} suppliers={activeSuppliers} freshMap={freshMap} supplierFreshMap={supplierFreshMap} onFreshDate={saveFreshDate} />}
         {page === "Debug"        && owner      && <DebugPage />}
+        {page === "Recipes"      && !isKitchen && <RecipePage lang={lang} />}
         </div>
       </div>
 

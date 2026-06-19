@@ -81,6 +81,14 @@ export function Icon({ name, size = 18, color = "currentColor", strokeWidth = 1.
         <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" {...p}/>
       </svg>
     ),
+    menu: (
+      <svg viewBox="0 0 24 24" style={s}>
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" {...p}/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" {...p}/>
+        <line x1="9" y1="9" x2="15" y2="9" {...p}/>
+        <line x1="9" y1="13" x2="13" y2="13" {...p}/>
+      </svg>
+    ),
   };
 
   return icons[name] ?? <svg viewBox="0 0 24 24" style={s}><circle cx="12" cy="12" r="5" fill={color}/></svg>;
