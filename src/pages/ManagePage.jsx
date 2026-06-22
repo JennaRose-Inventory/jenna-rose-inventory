@@ -99,7 +99,8 @@ function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = 
       onToast(t.alreadyExists, "error"); return;
     }
     // Use supplier's days, fall back to all days if supplier not found
-    const supplierDays = suppliers?.[newItem.category]?.days ?? EN_DAYS;
+    const sup = suppliers?.[newItem.category];
+    const supplierDays = (sup?.days?.length > 0 ? sup.days : null) ?? (sup?.orderDays?.length > 0 ? sup.orderDays : null) ?? EN_DAYS;
     setItems([...items, { ...newItem, name: newItem.name.trim(), stock: "", active: true, days: supplierDays }]);
     setNewItem((p) => ({ ...p, name: "", lowStock: "" }));
     onToast(t.addedOk(newItem.name), "success");
