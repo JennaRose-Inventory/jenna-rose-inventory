@@ -69,12 +69,6 @@ function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = 
   // Add item state
   const [newItem, setNewItem] = useState({ category: allCategories[0] ?? "", name: "", type: "quantity", lowStock: "" });
 
-  // Archive state
-  const [archiveSelect, setArchive] = useState({
-    category: firstActive?.category ?? allCategories[0] ?? "",
-    name:     firstActive?.name     ?? "",
-  });
-
   function itemsInCat(cat) { return items.filter((i) => i.active !== false && i.category === cat); }
 
   function saveEditItem() {
@@ -107,14 +101,15 @@ function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = 
     onToast(t.addedOk(newItem.name), "success");
   }
 
-  function archiveItem() {
-    const idx = items.findIndex((i) => i.category === archiveSelect.category && i.name === archiveSelect.name);
-    if (idx === -1) return;
-    const updated = [...items]; updated[idx] = { ...updated[idx], active: false };
+  function deleteItem() {
+    const { category, name } = editItem;
+    if (!name) return;
+    if (!window.confirm(isZH ? `确定删除 "${name}"？此操作无法撤销。` : `Delete "${name}"? This cannot be undone.`)) return;
+    const updated = items.filter((i) => !(i.category === category && i.name === name));
     setItems(updated);
-    const next = items.find((i) => i.active !== false && i.category === archiveSelect.category && i.name !== archiveSelect.name);
-    setArchive((p) => ({ ...p, name: next?.name ?? "" }));
-    onToast(t.archived(archiveSelect.name), "info");
+    const next = updated.find((i) => i.active !== false && i.category === category);
+    setEditItem(p => ({ ...p, name: next?.name ?? "", newName: next?.name ?? "", type: next?.type ?? "quantity", lowStock: next?.lowStock ?? "", freshDays: next?.freshDays ?? "" }));
+    onToast(isZH ? `"${name}" 已删除` : `"${name}" deleted`, "info");
   }
 
   const activeCount  = items.filter(i => i.active !== false).length;
@@ -132,6 +127,51 @@ function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = 
           {catCount} {isZH ? "个分类" : "categories"}
         </div>
       </div>
+
+      {/* ── Add Item ── */}
+      <Accordion
+        icon="➕"
+        title={isZH ? "添加新项目" : "Add New Item"}
+        desc={isZH ? "在某个分类下增加新项目" : "Add an item to a category"}
+        open={openSection === "add"}
+        onToggle={() => toggle("add")}
+      >
+        <div style={L}>{t.category}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={newItem.category} onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}>
+            {[...new Set([...allCategories, ...Object.keys(suppliers)])].sort().map((c) => <option key={c} value={c}>{c}</option>)}
+          </Select>
+        </div>
+        <div style={L}>{t.itemName}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Input placeholder={t.typeNewItemName} value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
+        </div>
+        <div style={L}>{t.inputType}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={newItem.type} onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}>
+            <option value="quantity">{t.numberCount}</option>
+            <option value="status">{t.enoughNeedOrder}</option>
+          </Select>
+        </div>
+        {newItem.type === "quantity" && (
+          <>
+            <div style={L}>{isZH ? "低库存阈值（留空 = 跟 supplier 设定）" : "Low Stock Threshold (leave blank = supplier default)"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                type="number" inputMode="numeric"
+                placeholder={isZH ? "例：5" : "e.g. 5"}
+                value={newItem.lowStock ?? ""}
+                onChange={(e) => setNewItem(p => ({ ...p, lowStock: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+              {isZH ? "当数量 ≤ 此值时显示红色警告" : "Shows red warning when stock ≤ this value"}
+            </div>
+          </>
+        )}
+        {newItem.type !== "quantity" && <div style={{ marginBottom: "14px" }} />}
+        <PrimaryBtn onClick={addItem}>{t.addItem}</PrimaryBtn>
+      </Accordion>
 
       {/* ── Edit Item ── */}
       <Accordion
@@ -212,87 +252,12 @@ function ItemsSection({ t, items, setItems, allCategories, onToast, suppliers = 
           </>
         )}
         {editItem.type !== "quantity" && <div style={{ marginBottom: "14px" }} />}
-        <PrimaryBtn onClick={saveEditItem}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <PrimaryBtn onClick={saveEditItem} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
+          <PrimaryBtn danger onClick={deleteItem} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
+        </div>
       </Accordion>
 
-      {/* ── Add Item ── */}
-      <Accordion
-        icon="➕"
-        title={isZH ? "添加新项目" : "Add New Item"}
-        desc={isZH ? "在某个分类下增加新项目" : "Add an item to a category"}
-        open={openSection === "add"}
-        onToggle={() => toggle("add")}
-      >
-        <div style={L}>{t.category}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={newItem.category} onChange={(e) => setNewItem({ ...newItem, category: e.target.value })}>
-            {[...new Set([...allCategories, ...Object.keys(suppliers)])].sort().map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
-        </div>
-        <div style={L}>{t.itemName}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Input placeholder={t.typeNewItemName} value={newItem.name} onChange={(e) => setNewItem({ ...newItem, name: e.target.value })} />
-        </div>
-        <div style={L}>{t.inputType}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={newItem.type} onChange={(e) => setNewItem({ ...newItem, type: e.target.value })}>
-            <option value="quantity">{t.numberCount}</option>
-            <option value="status">{t.enoughNeedOrder}</option>
-          </Select>
-        </div>
-        {newItem.type === "quantity" && (
-          <>
-            <div style={L}>{isZH ? "低库存阈值（留空 = 跟 supplier 设定）" : "Low Stock Threshold (leave blank = supplier default)"}</div>
-            <div style={{ marginBottom: "4px" }}>
-              <Input
-                type="number" inputMode="numeric"
-                placeholder={isZH ? "例：5" : "e.g. 5"}
-                value={newItem.lowStock ?? ""}
-                onChange={(e) => setNewItem(p => ({ ...p, lowStock: e.target.value }))}
-              />
-            </div>
-            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
-              {isZH ? "当数量 ≤ 此值时显示红色警告" : "Shows red warning when stock ≤ this value"}
-            </div>
-          </>
-        )}
-        {newItem.type !== "quantity" && <div style={{ marginBottom: "14px" }} />}
-        <PrimaryBtn onClick={addItem}>{t.addItem}</PrimaryBtn>
-      </Accordion>
-
-      {/* ── Archive Item ── */}
-      <Accordion
-        icon="🗃️"
-        title={isZH ? "归档项目" : "Archive Item"}
-        desc={isZH ? "隐藏不再使用的项目" : "Hide items no longer needed"}
-        open={openSection === "archive"}
-        onToggle={() => toggle("archive")}
-      >
-        <div style={{ fontSize: "11px", color: "var(--text-muted)", marginBottom: "12px" }}>{t.archiveDesc}</div>
-        <div style={L}>{t.category}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={archiveSelect.category} onChange={(e) => {
-            const cat = e.target.value;
-            const first = itemsInCat(cat)[0];
-            setArchive({ category: cat, name: first?.name ?? "" });
-          }}>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
-          </Select>
-        </div>
-        <div style={L}>{t.item}</div>
-        <div style={{ marginBottom: "14px" }}>
-          <Select value={archiveSelect.name} onChange={(e) => setArchive(p => ({ ...p, name: e.target.value }))}>
-            {itemsInCat(archiveSelect.category).map((i) => <option key={i.name} value={i.name}>{i.name}</option>)}
-          </Select>
-        </div>
-        <PrimaryBtn danger onClick={() => {
-          if (!archiveSelect.name) return;
-          if (!window.confirm(t.archiveConfirm(archiveSelect.name))) return;
-          archiveItem();
-        }}>
-          {t.archiveItem}
-        </PrimaryBtn>
-      </Accordion>
 
     </div>
   );
@@ -454,89 +419,6 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         </div>
       </div>
 
-      {/* ── Edit Supplier ── */}
-      <Accordion
-        icon="✏️"
-        title={isZH ? "编辑供应商" : "Edit Supplier"}
-        desc={isZH ? "更改联系方式或下单日" : "Update contact or order days"}
-        open={openSection === "edit"}
-        onToggle={() => setOpenSection(p => p === "edit" ? null : "edit")}
-      >
-        <div style={L}>{isZH ? "选择供应商" : "Select Supplier"}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={selCat} onChange={(e) => handleCatChange(e.target.value)}>
-            {Object.keys(suppliers).map((c) => <option key={c} value={c}>{c}</option>)}
-            {Object.keys(suppliers).length === 0 && <option value="">{isZH ? "无供应商" : "No suppliers"}</option>}
-          </Select>
-        </div>
-
-        <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
-            {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
-          </Select>
-        </div>
-
-        {form.type !== "copy" && (
-          <>
-            <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
-            <div style={{ marginBottom: "4px" }}>
-              <Input
-                placeholder={form.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
-                value={form.contact ?? ""}
-                onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
-              />
-            </div>
-            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
-              {form.type === "phone"
-                ? (isZH ? "格式：60123456789（不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
-                : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
-            </div>
-          </>
-        )}
-
-        <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
-        <div style={{ marginBottom: "10px" }}>
-          <Select value={form.lang ?? "zh"} onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value }))}>
-            <option value="zh">中文</option>
-            <option value="en">English</option>
-          </Select>
-        </div>
-
-        <div style={L}>{isZH ? "点货日" : "Counting Days"}</div>
-        <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
-
-        <div style={L}>{isZH ? "下单提醒日（哪天要下单给 supplier）" : "Order Reminder Day (when to place order)"}</div>
-        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
-          {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
-        </div>
-        <DayPicker value={form.orderDays ?? form.days ?? []} onChange={(day) => {
-          setForm(p => {
-            const current = p.orderDays ?? p.days ?? [];
-            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
-            return { ...p, orderDays: next };
-          });
-        }} />
-
-        <div style={L}>{isZH ? "默认低库存阈值（给旗下所有 item 用）" : "Default Low Stock Threshold (for all items)"}</div>
-        <div style={{ marginBottom: "4px" }}>
-          <Input
-            type="number" inputMode="numeric"
-            placeholder={isZH ? "例：5（留空 = 系统默认 ≤3）" : "e.g. 5 (blank = system default ≤3)"}
-            value={form.lowStock ?? ""}
-            onChange={(e) => setForm(p => ({ ...p, lowStock: e.target.value }))}
-          />
-        </div>
-        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
-          {isZH ? "item 没设个别阈值时，会用这个数值" : "Used when individual item has no threshold set"}
-        </div>
-
-        <div style={{ display: "flex", gap: "8px" }}>
-          <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
-          <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
-        </div>
-      </Accordion>
-
       {/* ── Add Supplier ── */}
       <Accordion
         icon="➕"
@@ -620,6 +502,89 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         </div>
 
         <PrimaryBtn onClick={handleAddSupplier}>{isZH ? "添加供应商" : "Add Supplier"}</PrimaryBtn>
+      </Accordion>
+
+      {/* ── Edit Supplier ── */}
+      <Accordion
+        icon="✏️"
+        title={isZH ? "编辑供应商" : "Edit Supplier"}
+        desc={isZH ? "更改联系方式或下单日" : "Update contact or order days"}
+        open={openSection === "edit"}
+        onToggle={() => setOpenSection(p => p === "edit" ? null : "edit")}
+      >
+        <div style={L}>{isZH ? "选择供应商" : "Select Supplier"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={selCat} onChange={(e) => handleCatChange(e.target.value)}>
+            {Object.keys(suppliers).map((c) => <option key={c} value={c}>{c}</option>)}
+            {Object.keys(suppliers).length === 0 && <option value="">{isZH ? "无供应商" : "No suppliers"}</option>}
+          </Select>
+        </div>
+
+        <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
+            {["group","phone","copy"].map((o) => <option key={o} value={o}>{typeLabel[o]}</option>)}
+          </Select>
+        </div>
+
+        {form.type !== "copy" && (
+          <>
+            <div style={L}>{isZH ? "联系方式" : "Contact"}</div>
+            <div style={{ marginBottom: "4px" }}>
+              <Input
+                placeholder={form.type === "group" ? "https://chat.whatsapp.com/xxx" : "60123456789"}
+                value={form.contact ?? ""}
+                onChange={(e) => setForm((p) => ({ ...p, contact: e.target.value }))}
+              />
+            </div>
+            <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "10px" }}>
+              {form.type === "phone"
+                ? (isZH ? "格式：60123456789（不需要 + 或 -）" : "Format: 60123456789 (no + or dashes)")
+                : (isZH ? "从 WhatsApp Group → Invite Link 复制" : "Copy from WhatsApp Group → Invite Link")}
+            </div>
+          </>
+        )}
+
+        <div style={L}>{isZH ? "消息语言" : "Message Language"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Select value={form.lang ?? "zh"} onChange={(e) => setForm((p) => ({ ...p, lang: e.target.value }))}>
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+          </Select>
+        </div>
+
+        <div style={L}>{isZH ? "点货日" : "Counting Days"}</div>
+        <DayPicker value={form.days ?? []} onChange={(day) => toggleDay(day, setForm)} />
+
+        <div style={L}>{isZH ? "下单提醒日（哪天要下单给 supplier）" : "Order Reminder Day (when to place order)"}</div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "6px" }}>
+          {isZH ? "这一天有低库存时会发通知提醒下单" : "Get notified on this day if stock is low"}
+        </div>
+        <DayPicker value={form.orderDays ?? form.days ?? []} onChange={(day) => {
+          setForm(p => {
+            const current = p.orderDays ?? p.days ?? [];
+            const next = current.includes(day) ? current.filter(d => d !== day) : [...current, day];
+            return { ...p, orderDays: next };
+          });
+        }} />
+
+        <div style={L}>{isZH ? "默认低库存阈值（给旗下所有 item 用）" : "Default Low Stock Threshold (for all items)"}</div>
+        <div style={{ marginBottom: "4px" }}>
+          <Input
+            type="number" inputMode="numeric"
+            placeholder={isZH ? "例：5（留空 = 系统默认 ≤3）" : "e.g. 5 (blank = system default ≤3)"}
+            value={form.lowStock ?? ""}
+            onChange={(e) => setForm(p => ({ ...p, lowStock: e.target.value }))}
+          />
+        </div>
+        <div style={{ fontSize: "10px", color: "var(--text-faint)", marginBottom: "14px" }}>
+          {isZH ? "item 没设个别阈值时，会用这个数值" : "Used when individual item has no threshold set"}
+        </div>
+
+        <div style={{ display: "flex", gap: "8px" }}>
+          <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
+          <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
+        </div>
       </Accordion>
 
     </div>
