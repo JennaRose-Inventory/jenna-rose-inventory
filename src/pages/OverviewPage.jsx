@@ -371,7 +371,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                   <button key={i}
                     onClick={() => setOrderModal({ category, latestMap: recordMaps[i] })}
                     style={{
-                      display:"flex", alignItems:"center", gap:"4px",
+                      display:"flex", flexDirection:"column", alignItems:"center", gap:"1px",
                       padding:"3px 9px", borderRadius:99,
                       background: supplier.type === "copy" ? "var(--surface2)" : i === 0 ? "#f0faf4" : "#f5f5f5",
                       border: `1px solid ${supplier.type === "copy" ? "var(--border)" : i === 0 ? "#a7d7b8" : "#d4d4d4"}`,
@@ -379,8 +379,13 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                       color: supplier.type === "copy" ? "var(--text-secondary)" : i === 0 ? "#1a7f37" : "#666",
                       cursor:"pointer", opacity: i === 1 ? 0.75 : 1,
                     }}>
-                    {supplier.type === "copy" ? COPY_ICON : WA_ICON}
-                    {i === 0 ? (isZH ? "今天" : "Latest") : `D-${i}`}
+                    <span style={{ fontSize:"8px", fontWeight:500, opacity:0.75 }}>
+                      {(() => { const [d,m] = uniqueDates[i].split("/"); return `${d}/${m}`; })()}
+                    </span>
+                    <span style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+                      {supplier.type === "copy" ? COPY_ICON : WA_ICON}
+                      {i === 0 ? (isZH ? "今天" : "Latest") : `D-${i}`}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -448,7 +453,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                       const color    = isLatest ? stockColor(val, itemConfig, suppliers) : "var(--text-faint)";
                       return (
                         <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                          <span style={{ fontSize: isLatest ? "13px" : "11px", fontWeight: isLatest ? 600 : 400, fontFamily: isNum ? "var(--font-mono)" : "inherit", color, opacity: isLatest ? 1 : 0.5 }}>
+                          <span style={{ fontSize: isLatest ? "13px" : "11px", fontWeight: isLatest ? 600 : 400, fontFamily: isNum ? "var(--font-mono)" : "inherit", color, opacity: isLatest ? 1 : 0.9 }}>
                             {valDisplay(val)}
                           </span>
                         </div>
