@@ -229,7 +229,7 @@ export default function App() {
     { id:"Count",    iconName:"count",    label:t.navCount,                                        depts:["frontend","kitchen"], adminOnly:false },
     { id:"Overview", iconName:"overview", label:t.navOverview,                                     depts:["frontend","kitchen"], adminOnly:false },
     { id:"Schedule", iconName:"calendar", label:t.appSub === "库存系统" ? "操作" : "Operations",  depts:["frontend"],            adminOnly:false },
-    { id:"Recipes",  iconName:"menu",     label:t.appSub === "库存系统" ? "菜单" : "Menu",         depts:["frontend"],            adminOnly:true },
+    { id:"Recipes",  iconName:"menu",     label:t.appSub === "库存系统" ? "菜单" : "Menu",         depts:["frontend"],            adminOnly:false },
     { id:"Dashboard",iconName:"stats",    label:t.appSub === "库存系统" ? "运营" : "Dashboard",   depts:["frontend","kitchen"],  adminOnly:true  },
     { id:"History",  iconName:"history",  label:t.appSub === "库存系统" ? "历史" : "History",     depts:["frontend","kitchen"],  adminOnly:false },
     { id:"Manage",   iconName:"manage",   label:t.navManage,                                       depts:["frontend","kitchen"],  adminOnly:false },

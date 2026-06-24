@@ -452,7 +452,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
                       const isLatest = i === 0;
                       const color    = isLatest ? stockColor(val, itemConfig, suppliers) : "var(--text-faint)";
                       return (
-                        <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <div key={i} style={{ width:colW, textAlign:"center", marginLeft:"6px", borderLeft: i === 1 ? "1.5px solid var(--border)" : "none", paddingLeft: i === 1 ? "10px" : "0", display:"flex", alignItems:"center", justifyContent:"center" }}>
                           <span style={{ fontSize: isLatest ? "13px" : "11px", fontWeight: isLatest ? 600 : 400, fontFamily: isNum ? "var(--font-mono)" : "inherit", color, opacity: isLatest ? 1 : 0.9 }}>
                             {valDisplay(val)}
                           </span>
@@ -536,7 +536,7 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
       {/* Past items separator + groups */}
       {Object.keys(pastGrouped).length > 0 && (
         <>
-          <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"16px 2px 14px" }}>
+          <div style={{ display:"flex", alignItems:"center", gap:"8px", margin:"38px 2px 30px" }}>
             <div style={{ flex:1, height:"1px", background:"var(--border2)" }} />
             <span style={{ fontSize:"10px", color:"var(--text-muted)", fontWeight:600, whiteSpace:"nowrap", letterSpacing:"0.04em", textTransform:"uppercase" }}>
               {isZH ? "过去点货" : "Previous days"}
