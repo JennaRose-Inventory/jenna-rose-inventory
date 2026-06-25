@@ -411,13 +411,100 @@ export default function RecipePage({ lang = "en" }) {
   const [search,     setSearch]     = useState("");
   const [selected,   setSelected]   = useState(null);   // detail view
   const [editing,    setEditing]    = useState(false);  // recipe edit modal
+
+  // Intercept phone back button when in detail view
+  useEffect(() => {
+    if (selected) {
+      history.pushState({ recipeDetail: true }, "");
+      const onPop = () => { setSelected(null); setEditing(false); };
+      window.addEventListener("popstate", onPop);
+      return () => window.removeEventListener("popstate", onPop);
+    }
+  }, [selected]);
   const [addingNew,  setAddingNew]  = useState(false);
   const [mngTabs,    setMngTabs]    = useState(false);
   const [editMode,   setEditMode]   = useState(false);  // bulk select mode
   const [selIds,     setSelIds]     = useState(new Set());
   const [confirmBulkDel, setConfirmBulkDel] = useState(false);
+  const [printMode,  setPrintMode]  = useState(false);  // print select mode
+  const [printIds,   setPrintIds]   = useState([]);     // ordered list of selected recipe ids (max 8)
 
   useEffect(() => { loadAll(); }, []);
+
+  function togglePrintId(id) {
+    setPrintIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= 8) return prev;
+      return [...prev, id];
+    });
+  }
+
+  function doPrint() {
+    const isZH = lang === "zh";
+    const labelMaterials = isZH ? "材料" : "Materials";
+    const labelSteps     = isZH ? "步骤" : "Steps";
+    const labelNotes     = isZH ? "备注" : "Notes";
+
+    const selected8 = printIds.map(id => recipes.find(r => r.id === id)).filter(Boolean);
+
+    function buildCell(r) {
+      if (!r) return `<div class="cell empty"></div>`;
+      const isEmoji = r.image && !r.image.startsWith("http");
+      const imgHTML = r.image
+        ? (isEmoji ? `<div class="cell-emoji">${r.image}</div>` : `<img class="cell-img" src="${r.image}" />`)
+        : `<div class="cell-emoji">☕</div>`;
+      const ingrs = (r.ingredients || []).map(i => `<li>${i.qty ? `<b>${i.qty}</b> ` : ""}${i.item}</li>`).join("");
+      const steps = (r.steps || []).filter(Boolean).map((s, i) => `<li>${i + 1}. ${s}</li>`).join("");
+      const notes = r.notes ? `<hr class="divider"/><div class="notes">📝 ${labelNotes}: ${r.notes}</div>` : "";
+      return `
+        <div class="cell">
+          <div class="cell-inner">
+            <div class="cell-top">
+              ${imgHTML}
+              <div class="cell-title">
+                <div class="cell-code">${r.code || ""}</div>
+                <div class="cell-name">${r.name}</div>
+              </div>
+            </div>
+            ${ingrs ? `<hr class="divider"/><div class="section-label">${labelMaterials}</div><ul class="ingr-list">${ingrs}</ul>` : ""}
+            ${steps ? `<hr class="divider"/><div class="section-label">${labelSteps}</div><ul class="steps-list">${steps}</ul>` : ""}
+            ${notes}
+          </div>
+        </div>`;
+    }
+
+    function buildPage(pageRecipes) {
+      const cells = Array.from({ length: 4 }, (_, i) => pageRecipes[i] || null);
+      return `<div class="page">${cells.map(buildCell).join("")}</div>`;
+    }
+
+    const page1 = buildPage(selected8.slice(0, 4));
+    const page2 = selected8.length > 4 ? buildPage(selected8.slice(4, 8)) : "";
+
+    const win = window.open("", "_blank");
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Recipes</title><style>
+      * { margin:0; padding:0; box-sizing:border-box; }
+      body { font-family: -apple-system, sans-serif; background:#fff; }
+      .page { width:210mm; height:297mm; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6mm; padding:10mm; page-break-after:always; }
+      .cell { border:1.5px solid #ddd0c0; border-radius:10px; overflow:hidden; background:#fffdf9; display:flex; align-items:center; justify-content:center; padding:16px; }
+      .cell.empty { background:#f9f6f2; border:1.5px dashed #e0d0c0; }
+      .cell-inner { width:100%; }
+      .cell-top { display:flex; gap:12px; align-items:center; margin-bottom:2px; }
+      .cell-emoji { font-size:52px; line-height:1; flex-shrink:0; }
+      .cell-img { width:72px; height:72px; object-fit:cover; border-radius:10px; flex-shrink:0; }
+      .cell-title { flex:1; }
+      .cell-code { font-size:10px; font-weight:700; color:#b07840; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px; }
+      .cell-name { font-size:16px; font-weight:700; color:#2a1a0d; line-height:1.25; }
+      .divider { border:none; border-top:1px solid #e8d8c8; margin:8px 0; }
+      .section-label { font-size:10px; font-weight:700; color:#b07840; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:5px; }
+      .ingr-list, .steps-list { list-style:none; display:flex; flex-direction:column; gap:3px; }
+      .ingr-list li, .steps-list li { font-size:12px; color:#3a2510; line-height:1.4; }
+      .ingr-list li b { color:#6b3f12; }
+      .notes { font-size:11px; color:#888; font-style:italic; }
+      @media print { body { -webkit-print-color-adjust:exact; print-color-adjust:exact; } }
+    </style></head><body>${page1}${page2}<script>window.onload=()=>{window.print();window.onafterprint=()=>window.close();}<\/script></body></html>`);
+    win.document.close();
+  }
 
   async function loadAll() {
     try {
@@ -545,14 +632,39 @@ export default function RecipePage({ lang = "en" }) {
             style={{ width:"100%", boxSizing:"border-box", padding:"11px 11px 11px 34px", borderRadius:14, border:"1.5px solid #ddd0c0", background:"#fff", fontSize:13, color:"#2a1a0d", fontFamily:"inherit", outline:"none" }} />
           {search && <button onClick={()=>setSearch("")} style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", background:"none", border:"none", color:"#b09070", fontSize:18, cursor:"pointer", lineHeight:1 }}>×</button>}
         </div>
-        <button onClick={()=>{ setEditMode(e=>!e); setSelIds(new Set()); setConfirmBulkDel(false); }}
+        <button onClick={()=>{ setEditMode(e=>!e); setSelIds(new Set()); setConfirmBulkDel(false); setPrintMode(false); }}
           style={{ width:42, height:42, borderRadius:13, border:`1.5px solid ${editMode?"#b07840":"#ddd0c0"}`, background: editMode?"rgba(176,120,64,0.1)":"#fff", color: editMode?"#b07840":"#b09070", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
           <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
           </svg>
         </button>
+        <button onClick={()=>{ setPrintMode(e=>!e); setPrintIds([]); setEditMode(false); }}
+          style={{ width:42, height:42, borderRadius:13, border:`1.5px solid ${printMode?"#b07840":"#ddd0c0"}`, background: printMode?"rgba(176,120,64,0.1)":"#fff", color: printMode?"#b07840":"#b09070", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <svg viewBox="0 0 24 24" width={15} height={15} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>
+          </svg>
+        </button>
       </div>
+
+      {/* Print toolbar */}
+      {printMode && (
+        <div style={{ background:"rgba(176,120,64,0.08)", border:"1.5px solid rgba(176,120,64,0.2)", borderRadius:14, padding:"10px 12px", marginBottom:14, display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:12, color:"#7a5540", fontWeight:600 }}>
+            {lang==="zh" ? `已选 ${printIds.length}/8 个食谱` : `${printIds.length}/8 selected`}
+          </span>
+          <div style={{ flex:1 }} />
+          {printIds.length > 0 && (
+            <button onClick={()=>setPrintIds([])} style={dkBtn("ghost-sm")}>
+              {lang==="zh" ? "清除" : "Clear"}
+            </button>
+          )}
+          <button onClick={doPrint} disabled={printIds.length===0}
+            style={{ ...dkBtn("gold-sm"), opacity: printIds.length===0 ? 0.4 : 1 }}>
+            🖨️ {lang==="zh" ? "打印" : "Print"}
+          </button>
+        </div>
+      )}
 
       {/* Edit toolbar */}
       {editMode && (
@@ -590,7 +702,7 @@ export default function RecipePage({ lang = "en" }) {
       {searchResults ? (
         <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
           {searchResults.length===0 && <div style={{ gridColumn:"1/-1", textAlign:"center", color:"#b09070", fontSize:14, paddingTop:32 }}>{t.noResults(search)}</div>}
-          {searchResults.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode} selected={selIds.has(r.id)} onSelect={toggleSel} onTap={setSelected} />)}
+          {searchResults.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode||printMode} selected={printMode ? printIds.includes(r.id) : selIds.has(r.id)} onSelect={printMode ? togglePrintId : toggleSel} onTap={printMode ? togglePrintId : setSelected} />)}
         </div>
       ) : (
         <>
@@ -604,7 +716,7 @@ export default function RecipePage({ lang = "en" }) {
                   <div style={{ flex:1, height:1, background:"rgba(176,120,64,0.2)" }} />
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
-                  {items.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode} selected={selIds.has(r.id)} onSelect={toggleSel} onTap={setSelected} />)}
+                  {items.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode||printMode} selected={printMode ? printIds.includes(r.id) : selIds.has(r.id)} onSelect={printMode ? togglePrintId : toggleSel} onTap={printMode ? togglePrintId : setSelected} />)}
                 </div>
               </div>
             );
@@ -619,7 +731,7 @@ export default function RecipePage({ lang = "en" }) {
                   <div style={{ flex:1, height:1, background:"rgba(176,120,64,0.2)" }} />
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:12 }}>
-                  {orphans.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode} selected={selIds.has(r.id)} onSelect={toggleSel} onTap={setSelected} />)}
+                  {orphans.map(r=><RecipeCard key={r.id} recipe={r} editMode={editMode||printMode} selected={printMode ? printIds.includes(r.id) : selIds.has(r.id)} onSelect={printMode ? togglePrintId : toggleSel} onTap={printMode ? togglePrintId : setSelected} />)}
                 </div>
               </div>
             );
