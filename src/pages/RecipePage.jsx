@@ -486,8 +486,8 @@ export default function RecipePage({ lang = "en" }) {
       * { margin:0; padding:0; box-sizing:border-box; }
       body { font-family: -apple-system, sans-serif; background:#fff; }
       .page { width:210mm; height:297mm; display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:6mm; padding:10mm; page-break-after:always; }
-      .cell { border:1.5px solid #ddd0c0; border-radius:10px; overflow:hidden; background:#fffdf9; display:flex; align-items:center; justify-content:center; padding:16px; }
-      .cell.empty { background:#f9f6f2; border:1.5px dashed #e0d0c0; }
+      .cell { border:1.5px solid #ccc; border-radius:10px; overflow:hidden; background:#fff; display:flex; align-items:center; justify-content:center; padding:16px; }
+      .cell.empty { background:#fff; border:1.5px dashed #ccc; }
       .cell-inner { width:100%; }
       .cell-top { display:flex; gap:12px; align-items:center; margin-bottom:2px; }
       .cell-emoji { font-size:52px; line-height:1; flex-shrink:0; }
