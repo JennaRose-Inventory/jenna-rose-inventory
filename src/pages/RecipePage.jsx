@@ -490,8 +490,8 @@ export default function RecipePage({ lang = "en" }) {
       .cell.empty { background:#fff; border:1.5px dashed #ccc; }
       .cell-inner { width:100%; }
       .cell-top { display:flex; gap:12px; align-items:center; margin-bottom:2px; }
-      .cell-emoji { font-size:52px; line-height:1; flex-shrink:0; }
-      .cell-img { width:72px; height:72px; object-fit:cover; border-radius:10px; flex-shrink:0; }
+      .cell-emoji { font-size:100px; line-height:1; flex-shrink:0; }
+      .cell-img { width:140px; height:140px; object-fit:cover; border-radius:10px; flex-shrink:0; }
       .cell-title { flex:1; }
       .cell-code { font-size:10px; font-weight:700; color:#b07840; letter-spacing:0.1em; text-transform:uppercase; margin-bottom:3px; }
       .cell-name { font-size:16px; font-weight:700; color:#2a1a0d; line-height:1.25; }
