@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Card, SectionLabel } from "../components/UI.jsx";
 import { shortDate, stockColor, isLowStock, daysSinceRestock, isFreshAlert, getAppDate } from "../utils/helpers.js";
 import { buildWhatsAppUrl } from "../utils/suppliers.js";
+import { db } from "../firebase.js";
+import { doc, getDoc } from "firebase/firestore";
 
 // ── Build message with quantities ─────────────────────────────────────────────
 function buildMessageWithQty(category, selectedItems, qtys, lang) {
@@ -245,7 +247,14 @@ function EditRecordModal({ record, onClose, onSave, onDelete, t }) {
 export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord, onUpdateRecord, freshMap = {}, onFreshDate, items = [], supplierFreshMap = {} }) {
   const [orderModal, setOrderModal] = useState(null);
   const [editModal,  setEditModal]  = useState(null);
+  const [categoryOrder, setCategoryOrder] = useState([]);
   const isZH = t.appSub === "库存系统";
+
+  useEffect(() => {
+    getDoc(doc(db, "config", "category_order"))
+      .then(s => { if (s.exists()) setCategoryOrder(s.data().order ?? []); })
+      .catch(() => {});
+  }, []);
 
   // Show latest 3 records (regardless of date) — sorted desc, pick latest per date
   const dateMap = {};
@@ -341,7 +350,12 @@ export default function OverviewPage({ t, historyData, suppliers, onDeleteRecord
     : [];
 
   function renderGroups(groupedItems) {
-    return Object.keys(groupedItems).map((category) => {
+    const cats = Object.keys(groupedItems);
+    const sorted = [
+      ...categoryOrder.filter(c => cats.includes(c)),
+      ...cats.filter(c => !categoryOrder.includes(c)),
+    ];
+    return sorted.map((category) => {
       const supplier = suppliers?.[category] ?? null;
       return (
         <div key={category} style={{ marginBottom:"16px" }}>
