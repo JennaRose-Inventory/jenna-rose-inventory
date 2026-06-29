@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, setDoc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import { Card, SectionLabel, Select, Input, PrimaryBtn } from "../components/UI.jsx";
 import { validateContact } from "../utils/suppliers.js";
@@ -297,6 +297,8 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   const [newSupplier, setNewSupplier] = useState({
     name: "", type: "group", contact: "", lang: "zh", days: [], orderDays: [], lowStock: "",
   });
+  const [renameTo, setRenameTo] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   const L = { fontSize: "11px", color: "var(--text-muted)", fontWeight: 600, marginBottom: "5px" };
 
@@ -309,6 +311,7 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
   function handleCatChange(cat) {
     setSelCat(cat);
     setForm(buildForm(cat));
+    setRenameTo("");
   }
 
   // Sync item days for a category
@@ -353,6 +356,58 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     setSelCat(next);
     if (next) setForm(buildForm(next));
     onToast(isZH ? `"${selCat}" 已删除，相关项目已隐藏` : `"${selCat}" deleted and items archived`, "info");
+  }
+
+  async function handleRename() {
+    const newName = renameTo.trim();
+    if (!newName) { onToast(isZH ? "请输入新名称" : "Enter a new name", "error"); return; }
+    if (newName === selCat) { onToast(isZH ? "名称没有变化" : "Name unchanged", "error"); return; }
+    if (suppliers[newName]) { onToast(isZH ? `"${newName}" 已存在` : `"${newName}" already exists`, "error"); return; }
+    setRenaming(true);
+    try {
+      // 1. Rename in suppliers object
+      const updatedSuppliers = { ...suppliers, [newName]: suppliers[selCat] };
+      delete updatedSuppliers[selCat];
+      onUpdateSuppliers(updatedSuppliers);
+
+      // 2. Rename category in all items
+      setItems(prev => prev.map(i => i.category === selCat ? { ...i, category: newName } : i));
+
+      // 3. Update category order in Firestore
+      const orderSnap = await getDoc(doc(db, "config", "category_order"));
+      if (orderSnap.exists()) {
+        const order = (orderSnap.data().order ?? []).map(c => c === selCat ? newName : c);
+        await setDoc(doc(db, "config", "category_order"), { order });
+      }
+
+      // 4. Update history records in Firestore
+      const histSnap = await getDocs(collection(db, "inventoryHistory"));
+      await Promise.all(histSnap.docs.map(async d => {
+        const its = d.data().items ?? [];
+        if (its.some(i => i.category === selCat)) {
+          await updateDoc(doc(db, "inventoryHistory", d.id), {
+            items: its.map(i => i.category === selCat ? { ...i, category: newName } : i),
+          });
+        }
+      }));
+
+      // 5. Update fresh dates in Firestore
+      const freshSnap = await getDocs(collection(db, "freshDates"));
+      await Promise.all(freshSnap.docs.map(async d => {
+        if (d.data().category === selCat) {
+          const data = d.data();
+          await setDoc(doc(db, "freshDates", `${newName}__${data.name}`), { ...data, category: newName });
+          await deleteDoc(doc(db, "freshDates", d.id));
+        }
+      }));
+
+      setSelCat(newName);
+      setRenameTo("");
+      onToast(isZH ? `已改名为 "${newName}" ✓` : `Renamed to "${newName}" ✓`, "success");
+    } catch (e) {
+      onToast(isZH ? "改名失败，请重试" : "Rename failed, please retry", "error");
+    }
+    setRenaming(false);
   }
 
   function handleAddSupplier() {
@@ -584,6 +639,24 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         <div style={{ display: "flex", gap: "8px" }}>
           <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
           <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
+        </div>
+
+        <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border)" }}>
+          <div style={L}>{isZH ? "改供应商名称" : "Rename Supplier"}</div>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <Input
+              value={renameTo}
+              onChange={(e) => setRenameTo(e.target.value)}
+              placeholder={selCat}
+              style={{ flex: 1 }}
+            />
+            <PrimaryBtn onClick={handleRename} disabled={renaming} style={{ flexShrink: 0 }}>
+              {renaming ? "…" : (isZH ? "改名" : "Rename")}
+            </PrimaryBtn>
+          </div>
+          <div style={{ fontSize: "10px", color: "var(--text-faint)", marginTop: "5px" }}>
+            {isZH ? "会同步更新所有点货记录和货品" : "Updates all records and items automatically"}
+          </div>
         </div>
       </Accordion>
 
