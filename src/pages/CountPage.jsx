@@ -3,6 +3,14 @@ import { createPortal } from "react-dom";
 import { SectionLabel, Spinner } from "../components/UI.jsx";
 import { countKey, isLowStock, getAppDayIndex } from "../utils/helpers.js";
 
+const CATEGORY_ORDER_KEY = "jr_category_order";
+function loadCategoryOrder() {
+  try { return JSON.parse(localStorage.getItem(CATEGORY_ORDER_KEY)) ?? []; } catch { return []; }
+}
+function saveCategoryOrder(order) {
+  localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(order));
+}
+
 const STATUS_CATEGORIES = ["TS Mart", "Thermalnator", "旺明"];
 const EN_DAYS = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 
@@ -138,6 +146,9 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
     }
   });
 
+  const [categoryOrder, setCategoryOrder] = useState(() => loadCategoryOrder());
+  const [editingOrder, setEditingOrder] = useState(false);
+
   const isWrongDay = selectedDay !== EN_DAYS[todayIdx];
 
   const activeItems = items.filter(
@@ -149,6 +160,21 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
     acc[item.category].push(item);
     return acc;
   }, {});
+
+  const allCategories = Object.keys(grouped);
+  const sortedCategories = [
+    ...categoryOrder.filter(c => allCategories.includes(c)),
+    ...allCategories.filter(c => !categoryOrder.includes(c)),
+  ];
+
+  function moveCat(idx, dir) {
+    const next = [...sortedCategories];
+    const swap = idx + dir;
+    if (swap < 0 || swap >= next.length) return;
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setCategoryOrder(next);
+    saveCategoryOrder(next);
+  }
 
   const filledCount = activeItems.filter(
     (i) => counts[countKey(i)] !== undefined && counts[countKey(i)] !== ""
@@ -306,10 +332,33 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
         </div>
       )}
 
+      {/* Category order edit button */}
+      {allCategories.length > 1 && (
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+          {editingOrder ? (
+            <button onClick={() => setEditingOrder(false)} style={{ fontSize: "12px", fontWeight: 600, color: "var(--brand)", background: "var(--brand-ghost)", border: "1.5px solid var(--brand-pale)", borderRadius: "var(--radius-full)", padding: "5px 14px", cursor: "pointer" }}>
+              {isZH ? "完成排序" : "Done"}
+            </button>
+          ) : (
+            <button onClick={() => setEditingOrder(true)} style={{ fontSize: "12px", fontWeight: 500, color: "var(--text-muted)", background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-full)", padding: "5px 14px", cursor: "pointer" }}>
+              {isZH ? "调整顺序" : "Reorder"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Item groups */}
-      {Object.keys(grouped).map((category) => (
+      {sortedCategories.map((category, catIdx) => (
         <div key={category} style={{ marginBottom: "16px" }}>
-          <SectionLabel>{category}</SectionLabel>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <div style={{ flex: 1 }}><SectionLabel>{category}</SectionLabel></div>
+            {editingOrder && (
+              <div style={{ display: "flex", gap: "4px", paddingBottom: "6px" }}>
+                <button disabled={catIdx === 0} onClick={() => moveCat(catIdx, -1)} style={{ width: 28, height: 28, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: catIdx === 0 ? "var(--surface2)" : "var(--surface)", color: catIdx === 0 ? "var(--text-faint)" : "var(--text-secondary)", cursor: catIdx === 0 ? "default" : "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>↑</button>
+                <button disabled={catIdx === sortedCategories.length - 1} onClick={() => moveCat(catIdx, 1)} style={{ width: 28, height: 28, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: catIdx === sortedCategories.length - 1 ? "var(--surface2)" : "var(--surface)", color: catIdx === sortedCategories.length - 1 ? "var(--text-faint)" : "var(--text-secondary)", cursor: catIdx === sortedCategories.length - 1 ? "default" : "pointer", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>↓</button>
+              </div>
+            )}
+          </div>
           <div style={{ background: "var(--surface)", borderRadius: "var(--radius-md)", border: "1px solid var(--border)", boxShadow: "var(--shadow-xs)", overflow: "hidden" }}>
             {grouped[category].map((item, idx) => {
               const key      = countKey(item);

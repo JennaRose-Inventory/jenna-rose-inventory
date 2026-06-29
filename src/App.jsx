@@ -739,7 +739,7 @@ export default function App() {
         {page === "History"     && <HistoryPage     t={t} historyData={deptHistory} freshMap={freshMap} supplierFreshMap={supplierFreshMap} />}
         {page === "Dashboard"   && <NewDashboardPage t={t} historyData={deptHistory} items={activeItems} isLoading={loading} />}
         {page === "Manage"      && <ManagePage      t={t} items={activeItems} setItems={setActiveItems} allCategories={allCategories} onToast={showToast} userName={userName} onChangeName={handleNameDone} suppliers={activeSuppliers} onUpdateSuppliers={handleUpdateSuppliers} freshMap={freshMap} isAdmin={owner} onLogout={handleLogout} onSetPage={setPage} />}
-        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} suppliers={activeSuppliers} freshMap={freshMap} supplierFreshMap={supplierFreshMap} onFreshDate={saveFreshDate} />}
+        {page === "Schedule"     && !isKitchen && <SchedulePage lang={lang} suppliers={activeSuppliers} freshMap={freshMap} supplierFreshMap={supplierFreshMap} onFreshDate={saveFreshDate} items={activeItems} />}
         {page === "Debug"        && owner      && <DebugPage />}
         {page === "Recipes"      && !isKitchen && <RecipePage lang={lang} />}
         </div>

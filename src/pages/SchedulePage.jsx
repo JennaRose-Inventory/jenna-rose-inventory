@@ -352,7 +352,7 @@ function DashboardStrip({ reservations, reminders, lang, onResClick, onRemClick 
 }
 
 // ─── 主页面 ────────────────────────────────────────────────────────────────────
-export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, onFreshDate }) {
+export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {}, onFreshDate, items = [] }) {
   const t = useT(lang);
   const [section, setSection] = useState("reservations"); // "reservations" | "reminders"
 
@@ -766,8 +766,8 @@ export default function SchedulePage({ lang = "en", suppliers = {}, freshMap = {
           }
         }
 
-        const rvItems = ["New York","Ultimate","Lemon Yogurt Tart","Brownie","Tart","Green Grapes","Earl Grey Lychee","Fruit Garden Pandan","Mango Passion Oolong"];
-        const mlItems = ["Mix Fruits","Hazelnut Chocolate","Charcoal Yam","Burnt Cheese Brulee","Bobochacha","Strawberry Burnt Cheese","Raspberry Matcha","Pistachio Yam"];
+        const rvItems = items.filter(i => i.category === "RV Bakery" && i.active !== false).map(i => i.name);
+        const mlItems = items.filter(i => i.category === "千层蛋糕"  && i.active !== false).map(i => i.name);
 
         function ItemLevelSupplier({ supplierName, itemNames }) {
           const expanded = !!expandedSuppliers[supplierName];
