@@ -1,14 +1,16 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { SectionLabel, Spinner } from "../components/UI.jsx";
 import { countKey, isLowStock, getAppDayIndex } from "../utils/helpers.js";
+import { db } from "../firebase.js";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 
-const CATEGORY_ORDER_KEY = "jr_category_order";
-function loadCategoryOrder() {
-  try { return JSON.parse(localStorage.getItem(CATEGORY_ORDER_KEY)) ?? []; } catch { return []; }
+const CAT_ORDER_DOC = doc(db, "config", "category_order");
+async function loadCategoryOrder() {
+  try { const s = await getDoc(CAT_ORDER_DOC); return s.exists() ? (s.data().order ?? []) : []; } catch { return []; }
 }
-function saveCategoryOrder(order) {
-  localStorage.setItem(CATEGORY_ORDER_KEY, JSON.stringify(order));
+async function saveCategoryOrder(order) {
+  try { await setDoc(CAT_ORDER_DOC, { order }); } catch {}
 }
 
 const STATUS_CATEGORIES = ["TS Mart", "Thermalnator", "旺明"];
@@ -146,8 +148,12 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
     }
   });
 
-  const [categoryOrder, setCategoryOrder] = useState(() => loadCategoryOrder());
+  const [categoryOrder, setCategoryOrder] = useState([]);
   const [editingOrder, setEditingOrder] = useState(false);
+
+  useEffect(() => {
+    loadCategoryOrder().then(order => setCategoryOrder(order));
+  }, []);
 
   const isWrongDay = selectedDay !== EN_DAYS[todayIdx];
 
@@ -173,7 +179,7 @@ export default function CountPage({ t, items, counts, onCountChange, onSave, onC
     if (swap < 0 || swap >= next.length) return;
     [next[idx], next[swap]] = [next[swap], next[idx]];
     setCategoryOrder(next);
-    saveCategoryOrder(next);
+    saveCategoryOrder(next);  // fire-and-forget async save to Firestore
   }
 
   const filledCount = activeItems.filter(
