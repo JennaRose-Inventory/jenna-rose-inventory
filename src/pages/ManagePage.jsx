@@ -321,25 +321,58 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
     ));
   }
 
-  function handleSave() {
+  async function handleSave() {
     const days = form.days ?? [];
     const v = validateContact(form.type, form.contact);
     if (!v.ok) { onToast(v.msg, "error"); return; }
-    const updated = {
-      ...suppliers,
-      [selCat]: {
-        type:      form.type,
-        contact:   (form.contact ?? "").trim(),
-        lang:      form.lang ?? "zh",
-        days,
-        orderDays: form.orderDays ?? days,
-        lowStock:  form.lowStock ?? "",
-      },
-    };
-    onUpdateSuppliers(updated);
-    // Sync Count days for all items in this category
-    syncItemDays(selCat, days);
-    onToast(isZH ? `"${selCat}" 已更新 ✓` : `"${selCat}" updated ✓`, "success");
+    const newName = renameTo.trim();
+    const isRename = newName && newName !== selCat;
+    if (isRename && suppliers[newName]) { onToast(isZH ? `"${newName}" 已存在` : `"${newName}" already exists`, "error"); return; }
+    const targetName = isRename ? newName : selCat;
+    const supplierData = { type: form.type, contact: (form.contact ?? "").trim(), lang: form.lang ?? "zh", days, orderDays: form.orderDays ?? days, lowStock: form.lowStock ?? "" };
+
+    if (isRename) {
+      setRenaming(true);
+      try {
+        // Update suppliers: add new key, remove old
+        const updatedSuppliers = { ...suppliers, [newName]: supplierData };
+        delete updatedSuppliers[selCat];
+        onUpdateSuppliers(updatedSuppliers);
+        // Update item categories
+        setItems(prev => prev.map(i => i.category === selCat ? { ...i, category: newName } : i));
+        // Update category order
+        const orderSnap = await getDoc(doc(db, "config", "category_order"));
+        if (orderSnap.exists()) {
+          const order = (orderSnap.data().order ?? []).map(c => c === selCat ? newName : c);
+          await setDoc(doc(db, "config", "category_order"), { order });
+        }
+        // Update history records
+        const histSnap = await getDocs(collection(db, "inventoryHistory"));
+        await Promise.all(histSnap.docs.map(async d => {
+          const its = d.data().items ?? [];
+          if (its.some(i => i.category === selCat))
+            await updateDoc(doc(db, "inventoryHistory", d.id), { items: its.map(i => i.category === selCat ? { ...i, category: newName } : i) });
+        }));
+        // Update fresh dates
+        const freshSnap = await getDocs(collection(db, "freshDates"));
+        await Promise.all(freshSnap.docs.map(async d => {
+          if (d.data().category === selCat) {
+            const data = d.data();
+            await setDoc(doc(db, "freshDates", `${newName}__${data.name}`), { ...data, category: newName });
+            await deleteDoc(doc(db, "freshDates", d.id));
+          }
+        }));
+        setSelCat(newName);
+        setRenameTo("");
+        onToast(isZH ? `已改名为 "${newName}" ✓` : `Renamed to "${newName}" ✓`, "success");
+      } catch { onToast(isZH ? "改名失败，请重试" : "Rename failed, please retry", "error"); }
+      setRenaming(false);
+    } else {
+      const updated = { ...suppliers, [targetName]: supplierData };
+      onUpdateSuppliers(updated);
+      syncItemDays(selCat, days);
+      onToast(isZH ? `"${selCat}" 已更新 ✓` : `"${selCat}" updated ✓`, "success");
+    }
   }
 
   function handleDelete() {
@@ -575,6 +608,15 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
           </Select>
         </div>
 
+        <div style={L}>{isZH ? "新名称" : "New Name"}</div>
+        <div style={{ marginBottom: "10px" }}>
+          <Input
+            value={renameTo}
+            onChange={(e) => setRenameTo(e.target.value)}
+            placeholder={isZH ? "输入新名称…" : "Enter new name…"}
+          />
+        </div>
+
         <div style={L}>{isZH ? "联系类型" : "Contact Type"}</div>
         <div style={{ marginBottom: "10px" }}>
           <Select value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value, contact: "" }))}>
@@ -637,26 +679,8 @@ function SupplierSection({ t, allCategories, suppliers, onUpdateSuppliers, onToa
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <PrimaryBtn onClick={handleSave} style={{ flex: 2 }}>{isZH ? "保存更改" : "Save Changes"}</PrimaryBtn>
+          <PrimaryBtn onClick={handleSave} disabled={renaming} style={{ flex: 2 }}>{renaming ? "…" : (isZH ? "保存更改" : "Save Changes")}</PrimaryBtn>
           <PrimaryBtn danger onClick={handleDelete} style={{ flex: 1 }}>{isZH ? "删除" : "Delete"}</PrimaryBtn>
-        </div>
-
-        <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px solid var(--border)" }}>
-          <div style={L}>{isZH ? "改供应商名称" : "Rename Supplier"}</div>
-          <div style={{ display: "flex", gap: "8px" }}>
-            <Input
-              value={renameTo}
-              onChange={(e) => setRenameTo(e.target.value)}
-              placeholder={selCat}
-              style={{ flex: 1 }}
-            />
-            <PrimaryBtn onClick={handleRename} disabled={renaming} style={{ flexShrink: 0 }}>
-              {renaming ? "…" : (isZH ? "改名" : "Rename")}
-            </PrimaryBtn>
-          </div>
-          <div style={{ fontSize: "10px", color: "var(--text-faint)", marginTop: "5px" }}>
-            {isZH ? "会同步更新所有点货记录和货品" : "Updates all records and items automatically"}
-          </div>
         </div>
       </Accordion>
 
